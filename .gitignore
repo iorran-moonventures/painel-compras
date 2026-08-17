@@ -1,0 +1,10 @@
+# Nada de banco, de-para ou backup entra aqui. Este repositório é público.
+*.db
+*.db-journal
+*.sqlite
+de-para*.json
+backups/
+*.xlsx
+*.backup-*.html
+*.log
+node_modules/
