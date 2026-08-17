@@ -18,9 +18,8 @@ Arquivo único, sem dependência externa — abre offline.
 Os números são um **retrato**, não dado ao vivo: a data da última atualização
 aparece no canto superior direito. A publicação é diária.
 
-Os nomes de fornecedor foram substituídos por códigos (`Fornecedor A`,
-`Fornecedor B`, ...) e os números de pedido por sequência (`PED-0001`).
-Preço unitário e informação de negociação de prazo não são publicados.
+Os números de pedido aparecem como sequência (`PED-0001`), não com a numeração
+interna. Preço unitário e informação de negociação de prazo não são publicados.
 
 ## Como é gerado
 
