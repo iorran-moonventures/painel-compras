@@ -3,7 +3,7 @@
 Painel de acompanhamento de fornecedores, pedidos e programação de entregas.
 Arquivo único, sem dependência externa — abre offline.
 
-**Acesso:** https://iorranmoutinho.github.io/painel-compras/
+**Acesso:** https://iorran-moonventures.github.io/painel-compras/
 
 ## O que o painel mostra
 
