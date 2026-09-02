@@ -104,6 +104,28 @@
   .nav-version { margin-left:8px; font-size:11px; color:#64748B; flex-shrink:0; white-space:nowrap; line-height:1.3; text-align:right; }
   .nav-version strong { display:block; color:#CBD5E1; font-weight:600; }
 
+  /* ── Barra de cima recolhida (aparece com o mouse) ──
+     A escolha de módulo já é a navegação principal; a barra fixa repetia isso e
+     comia 56px de altura em todas as telas. Agora ela dorme e sobe no hover.
+     O puxador fica sempre visível para não virar função escondida, e clicar nele
+     fixa a barra de volta (estado guardado em mv_nav_auto). */
+  body.nav-auto nav { transform:translateY(-100%); transition:transform .18s cubic-bezier(.4,0,.2,1); }
+  body.nav-auto.nav-aberta nav { transform:translateY(0); }
+  body.nav-auto .main { margin-top:0; height:100vh; }
+  #navZona { display:none;position:fixed;top:0;left:0;right:0;height:14px;z-index:101; }
+  body.nav-auto #navZona { display:block; }
+  #navPuxador { display:none;position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:102;
+    height:17px;padding:0 20px;border:none;border-radius:0 0 11px 11px;background:var(--navy);
+    color:var(--navy-soft);font-size:10px;line-height:15px;cursor:pointer;letter-spacing:2px;
+    box-shadow:0 2px 6px rgba(120,135,165,.28);transition:color .13s,opacity .15s; }
+  body.nav-auto #navPuxador { display:block; }
+  #navPuxador:hover { color:#fff; }
+  body.nav-auto.nav-aberta #navPuxador { opacity:0;pointer-events:none; }
+  .nav-recolher { margin-left:10px;flex-shrink:0;border:none;background:none;color:var(--navy-soft);
+    font-size:13px;line-height:1;cursor:pointer;padding:4px 6px;border-radius:6px;transition:.13s; }
+  .nav-recolher:hover { color:#fff;background:var(--navy-mid); }
+  body.nav-auto .nav-recolher { display:none; }
+
   /* ── MAIN ── */
   .main { margin-top:56px; display:flex; height:calc(100vh - 56px); }
   .view { display:none; width:100%; }
@@ -505,10 +527,17 @@
     font-size:9.5px;font-weight:700;color:var(--blue);white-space:nowrap;letter-spacing:-.2px; }
   .dc-rec-n.oculto, .dc-falta-n.oculto { display:none; }
 
+  /* ── Voltar do produto para o panorama geral ── */
+  .prod-voltar { padding:14px 28px 0; }
+  .btn-voltar { border:none;background:var(--bg);color:var(--text-mid);font-size:12px;font-weight:700;
+    padding:6px 13px 6px 10px;border-radius:99px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;
+    box-shadow:var(--nm-fora-sm);transition:color .13s,box-shadow .13s; }
+  .btn-voltar:hover { color:var(--blue);box-shadow:var(--nm-fora); }
+
   /* ── Lista de fornecedores recolhível ── */
-  #view-fornecedores { position:relative; }
-  #view-fornecedores .sidebar { transition:width .22s cubic-bezier(.4,0,.2,1); }
-  #view-fornecedores.lateral-off .sidebar {
+  #view-fornecedores, #view-produtos { position:relative; }
+  #view-fornecedores .sidebar, #view-produtos .sidebar { transition:width .22s cubic-bezier(.4,0,.2,1); }
+  #view-fornecedores.lateral-off .sidebar, #view-produtos.lateral-off .sidebar {
     width:0;min-width:0;padding:0;overflow:hidden;border-right:none;box-shadow:none; }
   /* o botão anda junto com a borda da lista */
   .side-toggle { position:absolute;top:12px;left:288px;z-index:20;
@@ -516,9 +545,9 @@
     color:var(--text-mid);font-size:14px;line-height:1;cursor:pointer;
     box-shadow:var(--nm-fora-sm);transition:left .22s cubic-bezier(.4,0,.2,1), color .13s; }
   .side-toggle:hover { color:var(--blue);box-shadow:var(--nm-fora); }
-  #view-fornecedores.lateral-off .side-toggle { left:10px; }
+  #view-fornecedores.lateral-off .side-toggle, #view-produtos.lateral-off .side-toggle { left:10px; }
   /* abre espaço para o botão não cobrir o conteúdo com a lista recolhida */
-  #view-fornecedores.lateral-off .detail > * { padding-left:44px; }
+  #view-fornecedores.lateral-off .detail > *, #view-produtos.lateral-off .detail > * { padding-left:44px; }
   .dash-col.atual .dc-lbl { color:var(--blue);font-weight:700; }
   .dash-col.atual .dc-lbl::after { content:' • hoje';font-weight:600;opacity:.75; }
   .dash-cols.denso .dash-col.atual .dc-lbl::after,
@@ -1211,9 +1240,158 @@
   .prz-sim input[type=range]::-webkit-slider-thumb {
     -webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--bg);
     margin-top:-6px;box-shadow:2px 2px 5px var(--sh-som), -2px -2px 5px var(--sh-luz); }
+
+  /* ══════ CONSUMO POR FORNECEDOR (aba Produtos) ══════ */
+  .pcons { padding:18px 24px 26px; }
+  .pcons-head { display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:12px; }
+  .pcons-tit { font-size:15px;font-weight:800;color:var(--text-dark);letter-spacing:-.2px; }
+  .pcons-sub { font-size:11.5px;color:var(--text-light);margin-top:3px;line-height:1.5;max-width:560px; }
+  .pcons-filtros { display:flex;gap:14px;flex-wrap:wrap;align-items:center; }
+  .pcons-fgrupo { display:flex;align-items:center;gap:5px; }
+  .pcons-flabel { font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-light);font-weight:700;margin-right:2px; }
+  .pcons-chip { border:none;background:var(--bg);color:var(--text-mid);font-size:11.5px;font-weight:600;
+    padding:5px 11px;border-radius:99px;cursor:pointer;box-shadow:var(--nm-fora-sm,0 1px 2px rgba(0,0,0,.08));transition:.15s; }
+  .pcons-chip:hover { color:var(--text-dark); }
+  .pcons-chip.on { background:var(--blue,#2563EB);color:#fff; }
+  .pcons-sel { border:1px solid var(--border);background:var(--white);color:var(--text-dark);
+    font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;max-width:280px;cursor:pointer; }
+  .pcons-kpis { display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 16px; }
+  .pcons-kpi { background:var(--white);border:1px solid var(--border);border-radius:10px;padding:9px 14px;min-width:118px; }
+  .pcons-kpi .k { font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-light);font-weight:700; }
+  .pcons-kpi .v { font-size:17px;font-weight:800;color:var(--text-dark);margin-top:2px;letter-spacing:-.4px; }
+  .pcons-kpi .d { font-size:10.5px;color:var(--text-light);margin-top:1px; }
+
+  .pcons-graf { background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 18px 14px; }
+/* ── Mês a mês (substituiu a pilha de 14 cores) ── */
+  .pcons-navmes { display:flex;align-items:center;gap:14px;padding:2px 4px 14px;border-bottom:1px solid var(--border);margin-bottom:14px; }
+  .pcons-navtxt { flex:1;text-align:center; }
+  .pcons-navmesnome { font-size:17px;font-weight:800;color:var(--text-dark);letter-spacing:-.3px; }
+  .pcons-navtot { font-size:12px;color:var(--text-light);font-weight:600;margin-top:2px; }
+  .pcons-tagfut { font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;
+    color:var(--text-light);background:var(--bg);padding:2px 7px;border-radius:99px;vertical-align:middle; }
+  .pcons-var { font-weight:700;margin-left:6px; }
+  .pcons-var.up { color:var(--green,#2E7D32); }
+  .pcons-var.down { color:#C62828; }
+  .pcons-var.vazio { color:var(--text-light);font-weight:600; }
+  .pcons-seta { width:36px;height:36px;flex-shrink:0;border:none;border-radius:50%;background:var(--bg);
+    color:var(--text-mid);font-size:20px;line-height:1;cursor:pointer;box-shadow:var(--nm-fora-sm);transition:.13s; }
+  .pcons-seta:hover:not(:disabled) { color:var(--blue,#2563EB);box-shadow:var(--nm-fora); }
+  .pcons-seta:disabled { opacity:.28;cursor:default; }
+
+  .pcons-bars { display:flex;flex-direction:column;gap:9px; }
+  .pcons-brow { display:grid;grid-template-columns:150px 1fr 92px 52px 84px;align-items:center;gap:12px; }
+  .pcons-bnome { font-size:12.5px;font-weight:700;color:var(--text-dark);display:flex;align-items:center;gap:6px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .pcons-bnome i { width:10px;height:10px;border-radius:3px;flex-shrink:0; }
+  .pcons-btrack { height:22px;background:var(--bg);border-radius:6px;overflow:hidden; }
+  .pcons-bfill { height:100%;border-radius:6px;min-width:3px;transition:width .2s; }
+  .pcons-bval { font-size:12.5px;font-weight:700;color:var(--text-mid);text-align:right;white-space:nowrap; }
+  .pcons-bpct { font-size:13px;font-weight:800;color:var(--text-dark);text-align:right; }
+  .pcons-bdeltacel { text-align:right; }
+  .pcons-bdelta { font-size:11px;font-weight:700;white-space:nowrap; }
+  .pcons-bdelta.up { color:var(--green,#2E7D32); }
+  .pcons-bdelta.down { color:#C62828; }
+  .pcons-bdelta.novo { color:var(--blue,#2563EB);font-weight:600; }
+
+  .pcons-regua-wrap { margin-top:20px;padding-top:12px;border-top:1px solid var(--border); }
+  .pcons-regua-tit { font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-light);
+    font-weight:700;margin-bottom:7px; }
+  .pcons-regua { display:flex;align-items:flex-end;gap:3px;overflow-x:auto;padding-bottom:2px; }
+  .pcons-rg { flex:1 1 0;min-width:26px;border:none;background:none;padding:0;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:4px; }
+  .pcons-rgslot { width:100%;height:46px;display:flex;align-items:flex-end; }
+  .pcons-rgbar { width:100%;display:block;background:var(--blue,#2563EB);opacity:.3;
+    border-radius:4px 4px 2px 2px;transition:opacity .13s; }
+  .pcons-rg:hover .pcons-rgbar { opacity:.6; }
+  .pcons-rg.on .pcons-rgbar { opacity:1; }
+  .pcons-rg.fut .pcons-rgbar { background:var(--text-light); }
+  .pcons-rglbl { font-size:9.5px;color:var(--text-light);font-weight:600;white-space:nowrap;height:12px; }
+  .pcons-rg.on .pcons-rglbl { color:var(--blue,#2563EB);font-weight:800; }
+
+  @media (max-width:900px) {
+    .pcons-brow { grid-template-columns:110px 1fr 76px 46px; }
+    .pcons-bdeltacel { display:none; }
+  }
+
+  .pcons-rank { margin-top:18px; }
+  .pcons-rrow { display:grid;grid-template-columns:132px 1fr 92px 56px;align-items:center;gap:10px;padding:6px 2px;
+    border-bottom:1px solid var(--border); }
+  .pcons-rrow:last-child { border-bottom:none; }
+  .pcons-rnome { font-size:12px;font-weight:700;color:var(--text-dark);display:flex;align-items:center;gap:6px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .pcons-rnome i { width:9px;height:9px;border-radius:3px;flex-shrink:0; }
+  .pcons-rtrack { height:9px;background:var(--bg);border-radius:99px;overflow:hidden; }
+  .pcons-rfill { height:100%;border-radius:99px; }
+  .pcons-rval { font-size:12px;font-weight:700;color:var(--text-mid);text-align:right;white-space:nowrap; }
+  .pcons-rpct { font-size:12px;font-weight:800;color:var(--text-dark);text-align:right; }
+  .pcons-catrow { cursor:pointer; }
+  .pcons-catrow:hover .pcons-rnome { color:var(--blue,#2563EB); }
+  .pcons-nota { font-size:11px;color:var(--text-light);line-height:1.55;margin-top:10px; }
+
+  /* ══════ LATERAL DE PRODUTOS EM DOIS NÍVEIS ══════
+     Sem chip, sem cabeçalho de grupo, sem legenda de duas palavras por item.
+     O relevo é o do Soft UI: a linha é uma superfície que sobe no hover e
+     afunda quando está aberta. */
+  #sidebarProd { overflow:hidden; }
+  .prod-side { display:flex;flex-direction:column;height:100%;min-height:0; }
+  .prod-side-topo { display:flex;align-items:center;gap:11px;padding:18px 18px 14px;flex-shrink:0; }
+  .prod-side-tit { font-size:15px;font-weight:800;color:var(--text-dark);letter-spacing:-.3px;line-height:1.2; }
+  .prod-side-sub { font-size:11px;color:var(--text-light);font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums; }
+  .prod-side-lista { flex:1;min-height:0;overflow-y:auto;padding:2px 12px 16px;display:flex;flex-direction:column;gap:5px; }
+  .prod-vazio { padding:22px 8px;font-size:12px;color:var(--text-light);text-align:center;line-height:1.6; }
+
+  /* ── Nível 1: categorias ── */
+  .cat-row { display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+    border:none;background:var(--bg);border-radius:13px;padding:12px 13px;cursor:pointer;
+    box-shadow:var(--nm-fora-sm);transition:box-shadow .14s, transform .14s; }
+  .cat-row:hover { box-shadow:var(--nm-fora);transform:translateX(2px); }
+  .cat-row:active { box-shadow:var(--nm-dentro-sm); }
+  .cat-marca { width:9px;height:26px;border-radius:5px;flex-shrink:0; }
+  .cat-row.insumo .cat-marca { opacity:.42; }
+  .cat-nome { flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--text-dark);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.1px; }
+  .cat-num { font-size:12.5px;font-weight:700;color:var(--text-light);font-variant-numeric:tabular-nums;flex-shrink:0; }
+  .cat-seta { font-size:15px;color:var(--text-light);opacity:.4;flex-shrink:0;line-height:1;transition:opacity .14s,transform .14s; }
+  .cat-row:hover .cat-seta { opacity:1;transform:translateX(2px);color:var(--blue); }
+
+  /* ── Voltar ── */
+  .cat-voltar { width:34px;height:34px;flex-shrink:0;border:none;border-radius:50%;background:var(--bg);
+    color:var(--text-mid);font-size:19px;line-height:1;cursor:pointer;box-shadow:var(--nm-fora-sm);transition:.14s; }
+  .cat-voltar:hover { color:var(--blue);box-shadow:var(--nm-fora); }
+
+  /* ── Busca + novo produto (só no nível 2) ── */
+  .prod-side-busca { display:flex;gap:8px;padding:0 14px 12px;flex-shrink:0; }
+  .prod-side-busca input { flex:1;min-width:0;height:36px;border:none;border-radius:11px;padding:0 13px;
+    font-size:12.5px;background:var(--bg);color:var(--text-dark);outline:none;box-shadow:var(--nm-dentro-sm); }
+  .prod-side-busca input::placeholder { color:var(--text-light); }
+  .prod-novo { width:36px;height:36px;flex-shrink:0;border:none;border-radius:11px;background:var(--blue);
+    color:#fff;font-size:19px;line-height:1;cursor:pointer;box-shadow:var(--nm-fora-sm);transition:.14s; }
+  .prod-novo:hover { box-shadow:var(--nm-fora);filter:brightness(1.06); }
+
+  /* ── Nível 2: produtos da categoria ── */
+  .tipo-row { display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+    border:none;background:var(--bg);border-radius:13px;padding:11px 13px;cursor:pointer;
+    box-shadow:var(--nm-fora-sm);transition:box-shadow .14s, transform .14s; }
+  .tipo-row:hover { box-shadow:var(--nm-fora);transform:translateX(2px); }
+  .tipo-row.active { box-shadow:var(--nm-dentro-sm);transform:none; }
+  .tipo-row.active .tipo-nome { color:var(--blue); }
+  .tipo-barra { width:4px;align-self:stretch;min-height:30px;border-radius:99px;flex-shrink:0; }
+  .tipo-corpo { flex:1;min-width:0;display:flex;flex-direction:column;gap:6px; }
+  .tipo-nome { font-size:13px;font-weight:700;color:var(--text-dark);letter-spacing:-.1px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .tipo-dots { display:flex;align-items:center;gap:3px;flex-wrap:wrap; }
+  .tipo-dots i { width:9px;height:9px;border-radius:50%;display:block;flex-shrink:0;
+    box-shadow:inset 0 0 0 1px rgba(22,32,58,.14); }
+  .tipo-dots em { font-size:9.5px;font-style:normal;font-weight:700;color:var(--text-light);margin-left:2px; }
+  .tipo-cat { font-size:10.5px;font-weight:600;color:var(--text-light); }
+  .tipo-num { font-size:12.5px;font-weight:700;color:var(--text-light);font-variant-numeric:tabular-nums;flex-shrink:0; }
+  .tipo-row.active .tipo-num { color:var(--blue); }
 </style>
 </head>
 <body>
+
+<div id="navZona" aria-hidden="true"></div>
+<button id="navPuxador" onclick="fixarNav()" title="A barra some sozinha. Passe o mouse aqui para abrir, ou clique para deixá-la fixa.">•••</button>
 
 <nav>
   <div class="nav-brand" onclick="voltarHome()" title="Voltar para a escolha de módulos"
@@ -1233,7 +1411,8 @@
     <input type="text" id="navSearch" placeholder="Buscar fornecedor..." oninput="onNavSearch(this.value)">
   </div>
   <div class="nav-badge" id="navBadge"><strong>68</strong> fornecedores</div>
-  <div class="nav-version" id="navVersion" title="Retrato dos dados nesta data."><strong>Retrato de</strong>01/09/2026</div>
+  <div class="nav-version" id="navVersion" title="Retrato dos dados nesta data."><strong>Retrato de</strong>02/09/2026</div>
+  <button class="nav-recolher" onclick="recolherNav()" title="Recolher a barra — ela volta quando o mouse chegar no topo">▲</button>
 </nav>
 
 <div class="main">
@@ -1277,22 +1456,10 @@
 
   <!-- ════════════════ VIEW: PRODUTOS ════════════════ -->
   <div class="view" id="view-produtos">
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-title">Categoria</div>
-        <div class="filter-chips">
-          <button class="chip active" onclick="setProdCategoria('todos',this)">Todos</button>
-          <button class="chip" onclick="setProdCategoria('produto',this)">Produto</button>
-          <button class="chip" onclick="setProdCategoria('insumo',this)">Insumo</button>
-        </div>
-        <div class="sidebar-title" style="margin-top:14px">Tipo de produto</div>
-        <div class="filter-chips" id="tipoChips" style="max-height:80px;overflow:hidden;"></div>
-      </div>
-      <div class="sidebar-search">
-        <input type="text" id="productSearch" placeholder="Buscar produto..." oninput="filterProducts(this.value)">
-        <button class="btn-primary" style="width:100%;margin-top:8px;font-size:12px" onclick="renderNewProductForm()">+ Novo produto</button>
-      </div>
-      <div class="sidebar-list" id="productList"></div>
+    <button class="side-toggle" id="sideToggleProd" onclick="alternarLateral(null,'produtos')"
+            title="Recolher a lista de produtos" aria-expanded="true">‹</button>
+    <div class="sidebar" id="sidebarProd">
+      <div class="prod-side" id="prodSidebar"></div>
     </div>
     <div class="detail" id="productDetail">
       <div class="detail-empty"><div class="icon">👕</div><div>Selecione um produto</div></div>
@@ -2061,7 +2228,7 @@ document.addEventListener('DOMContentLoaded', bootCalendario);
 
 // Data da última revisão dos dados embutidos. Um lugar só para atualizar —
 // antes esta data estava chumbada no HTML e nunca acompanhava os dados.
-const DATA_REVISAO = '2026-09-01';
+const DATA_REVISAO = '2026-09-02';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('navVersion');
   if (el) {
@@ -2250,10 +2417,11 @@ function switchView(view, btn) {
     navBadge.innerHTML = '<strong>' + SUPPLIERS.length + '</strong> fornecedores';
   } else {
     navSearch.placeholder = 'Buscar produto...';
-    navSearch.oninput = e => { document.getElementById('productSearch').value = e.target.value; filterProducts(e.target.value); };
+    navSearch.oninput = e => { const c = document.getElementById('productSearch'); if (c) c.value = e.target.value; filterProducts(e.target.value); };
     const tipos = [...new Set(getEffectiveProducts().map(p => p.tipo))];
     navBadge.innerHTML = '<strong>' + tipos.length + '</strong> tipos';
     renderProductList();
+    if (!currentProductId) renderConsumoGeral();
   }
 }
 
@@ -2272,6 +2440,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderProductList();
   buildTipoChips();
   renderCadastroList();
+  renderConsumoGeral();   // Produtos abre no gráfico geral, não em 'Selecione um produto'
   document.getElementById('navSearchWrap').style.display = 'none';
   document.getElementById('navBadge').innerHTML = 'Calendário de entregas';
   conferirPendente();
@@ -2281,20 +2450,28 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Lista de fornecedores recolhível ──
 // Recolher muda a largura do gráfico, e o ajuste de rótulos depende dela.
 // Por isso o remede vem depois da transição, não junto do clique.
-function alternarLateral(forcar) {
-  const v = document.getElementById('view-fornecedores');
+// Uma função para as duas telas: 'fornecedores' e 'produtos' têm a mesma lateral.
+// Cada uma lembra o próprio estado — recolher a lista de produtos não some com a
+// de fornecedores.
+const LATERAIS = {
+  fornecedores: { view:'view-fornecedores', botao:'sideToggle',     lado:'sidebarForn', chave:'mv_lateral_off',      rot:'a lista de fornecedores' },
+  produtos:     { view:'view-produtos',     botao:'sideToggleProd', lado:'sidebarProd', chave:'mv_lateral_off_prod', rot:'a lista de produtos' }
+};
+function alternarLateral(forcar, qual) {
+  const cfg = LATERAIS[qual || 'fornecedores'];
+  const v = document.getElementById(cfg.view);
   if (!v) return;
   const off = forcar != null ? forcar : !v.classList.contains('lateral-off');
   v.classList.toggle('lateral-off', off);
-  const bt = document.getElementById('sideToggle');
+  const bt = document.getElementById(cfg.botao);
   if (bt) {
     bt.textContent = off ? '›' : '‹';
-    bt.title = off ? 'Mostrar a lista de fornecedores' : 'Recolher a lista de fornecedores';
+    bt.title = (off ? 'Mostrar ' : 'Recolher ') + cfg.rot;
     bt.setAttribute('aria-expanded', String(!off));
   }
-  try { localStorage.setItem('mv_lateral_off', off ? '1' : '0'); } catch (e) {}
+  try { localStorage.setItem(cfg.chave, off ? '1' : '0'); } catch (e) {}
 
-  const lado = document.getElementById('sidebarForn');
+  const lado = document.getElementById(cfg.lado);
   let feito = false;
   const remedir = () => { if (feito) return; feito = true; ajustaGraficoMes(); };
   if (lado) lado.addEventListener('transitionend', remedir, { once: true });
@@ -2307,7 +2484,8 @@ function alternarLateral(forcar) {
 // cliques — quadro Fornecedores — e a barra de cima segue disponível para quem
 // já sabe onde quer ir.
 function abrirTelaInicial() {
-  try { if (localStorage.getItem('mv_lateral_off') === '1') alternarLateral(true); } catch (e) {}
+  try { if (localStorage.getItem('mv_lateral_off') === '1') alternarLateral(true, 'fornecedores'); } catch (e) {}
+  try { if (localStorage.getItem('mv_lateral_off_prod') === '1') alternarLateral(true, 'produtos'); } catch (e) {}
   const el = document.getElementById('homeNome');
   if (el) {
     const u = (typeof USUARIO !== 'undefined' && USUARIO) ? USUARIO : 'Iorran';
@@ -3263,103 +3441,12 @@ function switchTab(btn, tabId) {
 // ═══════════════════════════════════════════════════════
 //  PRODUTOS VIEW
 // ═══════════════════════════════════════════════════════
-let currentTipoFilter = 'todos';
-let currentProdCat = 'todos';
-
-function setProdCategoria(cat, btn) {
-  currentProdCat = cat;
-  currentTipoFilter = 'todos';
-  btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  buildTipoChips();
-  renderProductList();
-}
-
-function buildTipoChips() {
-  const prods = getEffectiveProducts().filter(p => currentProdCat === 'todos' || p.categoria === currentProdCat);
-  const tipos = ['todos', ...new Set(prods.map(p => p.tipo))].sort();
-  const wrap = document.getElementById('tipoChips');
-  wrap.innerHTML = tipos.map(t =>
-    `<button class="chip${t==='todos'?' active':''}" onclick="setTipoFilter('${escJs(t)}',this)" title="${escAttr(t)}">${t==='todos'?'Todos':escHtml(t.length>20?t.slice(0,18)+'…':t)}</button>`
-  ).join('');
-}
-
-function setTipoFilter(tipo, btn) {
-  currentTipoFilter = tipo;
-  document.querySelectorAll('#tipoChips .chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  renderProductList();
-}
-
-// ── Produtos sidebar: uma linha por tipo, cores como dots ──
-function renderProductList(q) {
-  if (q === undefined) q = document.getElementById('productSearch')?.value || '';
-  const products = getEffectiveProducts();
-  const list = document.getElementById('productList');
-  let filtered = products.filter(p => {
-    if (currentProdCat !== 'todos' && p.categoria !== currentProdCat) return false;
-    if (currentTipoFilter !== 'todos' && p.tipo !== currentTipoFilter) return false;
-    if (q && !p.nome.toLowerCase().includes(q.toLowerCase()) &&
-            !p.tipo.toLowerCase().includes(q.toLowerCase()) &&
-            !p.cor.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  });
-
-  // Group by tipo — one sidebar item per tipo
-  const groups = {};
-  filtered.forEach(p => { if (!groups[p.tipo]) groups[p.tipo] = []; groups[p.tipo].push(p); });
-
-  // agrupa os tipos por linha de produto
-  const porLinha = {};
-  Object.entries(groups).forEach(([tipo, items]) => {
-    const L = items[0]?.linha || 'Outros';
-    (porLinha[L] = porLinha[L] || []).push([tipo, items]);
-  });
-  const html = Object.entries(porLinha).sort((a,b) => a[0].localeCompare(b[0])).map(([linha, tipos]) => {
-    const nProd = tipos.reduce((s,[,it]) => s + it.length, 0);
-    const cab = `<div class="linha-header"><span>${escHtml(linha)}</span>
-      <span class="lh-badge">${tipos.length} tipo${tipos.length>1?'s':''} · ${nProd} cores</span></div>`;
-    return cab + tipos.sort((a,b) => a[0].localeCompare(b[0])).map(([tipo, items]) => {
-    const supsDoTipo = [...new Set(items.flatMap(p => Object.keys(p.fornecedores)))];
-    const active = currentProductId === tipo ? ' active' : '';
-    const dots = items.sort((a,b) => a.cor.localeCompare(b.cor)).slice(0, 8).map(p =>
-      `<span style="width:8px;height:8px;border-radius:50%;background:${getColorHex(p.cor)};display:inline-block;border:1px solid rgba(0,0,0,0.12);flex-shrink:0"></span>`
-    ).join('');
-    const safeType = tipo.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    return `<div class="list-item${active}" onclick="selectProductType('${safeType}')">
-      <div class="item-dot" style="background:${getTypeColor(tipo)}"></div>
-      <div class="item-main">
-        <div class="item-name">${tipo}</div>
-        <div class="item-sub" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-          ${dots}<span style="margin-left:2px">${items.length} cor${items.length > 1 ? 'es' : ''} · ${supsDoTipo.length} forn.</span>
-        </div>
-      </div>
-      <div class="item-badge">${items.length} SKU${items.length > 1 ? 's' : ''}</div>
-    </div>`;
-    }).join('');
-  }).join('');
-
-  // Categoria escolhida que não tem nenhum produto no catálogo (hoje: insumo).
-  // Explica o vazio em vez de deixar a tela em branco sem motivo.
-  const catSemProdutos = currentProdCat !== 'todos' && !products.some(p => p.categoria === currentProdCat);
-  list.innerHTML = html || (catSemProdutos
-    ? `<div class="no-items" style="line-height:1.6">Nenhum produto da categoria <b>${escHtml(currentProdCat)}</b> cadastrado ainda.<br>Use <b>Novo produto</b> para começar o catálogo de ${escHtml(currentProdCat)}s.</div>`
-    : '<div class="no-items">Nenhum produto encontrado.</div>');
-  const navBadge = document.getElementById('navBadge');
-  if (currentView === 'produtos') {
-    const tiposCount = Object.keys(groups).length;
-    navBadge.innerHTML = '<strong>' + tiposCount + '</strong> tipo' + (tiposCount !== 1 ? 's' : '') + ' · <strong>' + filtered.length + '</strong> SKUs';
-  }
-}
-
-function filterProducts(q) {
-  renderProductList(q);
-}
+// Os chips de filtro deram lugar à lateral de dois níveis (renderProdSidebar).
 
 // ── Seleciona por tipo (agrupa todas as cores) ──
 function selectProductType(tipo) {
   currentProductId = tipo;
-  if(!['cores','follow','info'].includes(currentTab)) currentTab='cores';
+  if(!['cores','follow','info','consumo'].includes(currentTab)) currentTab='cores';
   renderProductList();
   const products = getEffectiveProducts().filter(p => p.tipo === tipo);
   renderProductTypeDetail(tipo, products);
@@ -3390,7 +3477,8 @@ function renderProductTypeDetail(tipo, items) {
   const detail = document.getElementById('productDetail');
   const allFollow = pedidosDosProdutos(items);
   const allSuppliers = [...new Set(allFollow.map(o => o.supplier))];
-  const ct = ['cores','follow','info'].includes(currentTab) ? currentTab : 'cores';
+  const ct = ['cores','follow','info','consumo'].includes(currentTab) ? currentTab : 'cores';
+  pconsCtx = tipo;   // o gráfico de consumo desta tela é sempre desta categoria
   currentTab = ct;
 
   const colorRows = items.sort((a,b) => a.cor.localeCompare(b.cor)).map(p => {
@@ -3422,6 +3510,8 @@ function renderProductTypeDetail(tipo, items) {
   }).join('');
 
   detail.innerHTML = `
+    <div class="prod-voltar"><button class="btn-voltar" onclick="voltarProdutosGeral()"
+      title="Voltar para o consumo de todas as categorias">‹ Panorama geral</button></div>
     <div class="detail-header">
       <div class="detail-avatar" style="background:${getTypeColor(tipo)};font-size:13px">${getTypeIcon(tipo)}</div>
       <div class="detail-info">
@@ -3436,6 +3526,7 @@ function renderProductTypeDetail(tipo, items) {
     <div class="tabs-bar">
       <button class="tab-btn${ct==='cores'?' active':''}" onclick="switchTab(this,'prod-tab-cores')">Cores & SKUs (${items.length})</button>
       <button class="tab-btn${ct==='follow'?' active':''}" onclick="switchTab(this,'prod-tab-follow')">Pedidos (Follow)${allFollow.length?` (${allFollow.length})`:''}</button>
+      <button class="tab-btn${ct==='consumo'?' active':''}" onclick="switchTab(this,'prod-tab-consumo')">Consumo por fornecedor</button>
       <button class="tab-btn${ct==='info'?' active':''}" onclick="switchTab(this,'prod-tab-info')">Informações</button>
     </div>
     <div class="tab-panel${ct==='cores'?' active':''}" id="prod-tab-cores">
@@ -3443,6 +3534,9 @@ function renderProductTypeDetail(tipo, items) {
     </div>
     <div class="tab-panel-padded${ct==='follow'?' active':''}" id="prod-tab-follow">
       ${renderSupplierFollowOrders(allFollow)}
+    </div>
+    <div class="tab-panel${ct==='consumo'?' active':''}" id="prod-tab-consumo">
+      <div id="pconsBox">${pconsHtml(tipo)}</div>
     </div>
     <div class="tab-panel-padded${ct==='info'?' active':''}" id="prod-tab-info">
       <div><span class="section-title">Produto</span></div>
@@ -5149,7 +5243,7 @@ function aplicarPrecoTipo(tipo, supplier) {
   renderSupplierDetail(s, getEffectiveProducts().filter(p => p.fornecedores[supplier]), null, false);
 }
 
-const PRECOS_BASE = {"bermuda-alfaiataria-azul-marinho::LÁBIOS DE MEL":{"valor":84.16,"data":"2026-08-31","origem":"planilha"},"bermuda-alfaiataria-caqui::LÁBIOS DE MEL":{"valor":84.16,"data":"2026-08-31","origem":"planilha"},"bermuda-alfaiataria-preta::LÁBIOS DE MEL":{"valor":87.9,"data":"2026-08-31","origem":"planilha"},"bermuda-comfort-azul::DOPIO":{"valor":126.2,"data":"2026-08-31","origem":"planilha"},"bermuda-comfort-caqui::DOPIO":{"valor":126.2,"data":"2026-08-31","origem":"planilha"},"bermuda-comfort-preta::DOPIO":{"valor":126.2,"data":"2026-08-31","origem":"planilha"},"bermuda-comfort-verde::DOPIO":{"valor":126.2,"data":"2026-08-31","origem":"planilha"},"bermuda-de-linho-caqui::LÁBIOS DE MEL":{"valor":99.25,"data":"2026-08-31","origem":"planilha"},"bermuda-de-linho-cru::LÁBIOS DE MEL":{"valor":99.25,"data":"2026-08-31","origem":"planilha"},"bermuda-de-linho-marinho::LÁBIOS DE MEL":{"valor":99.25,"data":"2026-08-31","origem":"planilha"},"bermuda-de-linho-preta::LÁBIOS DE MEL":{"valor":99.25,"data":"2026-08-31","origem":"planilha"},"bermuda-verao-26-bege::LÁBIOS DE MEL":{"valor":96,"data":"2026-07-31","origem":"mapao"},"bermuda-verao-26-verde::LÁBIOS DE MEL":{"valor":96,"data":"2026-07-31","origem":"mapao"},"calca-alfaiataria-azul::LÁBIOS DE MEL":{"valor":103,"data":"2026-08-31","origem":"planilha"},"calca-alfaiataria-azul::VAPE":{"valor":105,"data":"2026-08-31","origem":"planilha"},"calca-alfaiataria-caqui::LÁBIOS DE MEL":{"valor":103,"data":"2026-08-31","origem":"planilha"},"calca-alfaiataria-caqui::VAPE":{"valor":105,"data":"2026-08-31","origem":"planilha"},"calca-alfaiataria-cinza::LÁBIOS DE MEL":{"valor":103,"data":"2026-08-31","origem":"planilha"},"calca-alfaiataria-cinza::VAPE":{"valor":105,"data":"2026-08-31","origem":"planilha"},"calca-alfaiataria-preta::LÁBIOS DE MEL":{"valor":103,"data":"2026-08-31","origem":"planilha"},"calca-alfaiataria-preta::VAPE":{"valor":105,"data":"2026-08-31","origem":"planilha"},"calca-comfort-azul::DOPIO":{"valor":145.3,"data":"2026-08-31","origem":"planilha"},"calca-comfort-azul::LÁBIOS DE MEL":{"valor":113,"data":"2026-08-31","origem":"planilha"},"calca-comfort-caqui::DOPIO":{"valor":145.3,"data":"2026-08-31","origem":"planilha"},"calca-comfort-cinza::DOPIO":{"valor":145.3,"data":"2026-08-31","origem":"planilha"},"calca-comfort-marrom::DOPIO":{"valor":145.3,"data":"2026-08-31","origem":"planilha"},"calca-comfort-marrom::LÁBIOS DE MEL":{"valor":113,"data":"2026-08-31","origem":"planilha"},"calca-comfort-preta::DOPIO":{"valor":145.3,"data":"2026-08-31","origem":"planilha"},"calca-comfort-verde-militar::DOPIO":{"valor":145.3,"data":"2026-08-31","origem":"planilha"},"calca-de-linho-caqui::LÁBIOS DE MEL":{"valor":124.25,"data":"2026-08-31","origem":"planilha"},"calca-de-linho-cru::LÁBIOS DE MEL":{"valor":124.25,"data":"2026-08-31","origem":"planilha"},"calca-de-linho-marinho::LÁBIOS DE MEL":{"valor":124.25,"data":"2026-08-31","origem":"planilha"},"calca-de-linho-preta::LÁBIOS DE MEL":{"valor":124.25,"data":"2026-08-31","origem":"planilha"},"calca-jeans-2-0-azul-claro::DOPIO":{"valor":114,"data":"2026-08-31","origem":"planilha"},"calca-jeans-2-0-azul-escuro::DOPIO":{"valor":114,"data":"2026-08-31","origem":"planilha"},"calca-jeans-2-0-preta::DOPIO":{"valor":114,"data":"2026-08-31","origem":"planilha"},"calca-jeans-moletom-lavagem-clara::VANELISE":{"valor":114,"data":"2026-08-31","origem":"planilha"},"calca-jeans-moletom-lavagem-escura::VANELISE":{"valor":114,"data":"2026-08-31","origem":"planilha"},"calca-jeans-moletom-preta::VANELISE":{"valor":114,"data":"2026-08-31","origem":"planilha"},"calca-verao-26-areia::LÁBIOS DE MEL":{"valor":112,"data":"2026-07-31","origem":"mapao"},"calca-verao-26-marrom::LÁBIOS DE MEL":{"valor":112,"data":"2026-07-31","origem":"mapao"},"camisa-polo-2-0-azul-marinho::COORDENATI":{"valor":59.29,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-azul-marinho::JACE":{"valor":59.29,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-azul-marinho::SEEDER":{"valor":59.29,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-branca::COORDENATI":{"valor":58.33,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-branca::JACE":{"valor":58.33,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-branca::SEEDER":{"valor":59.29,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-marrom::JACE":{"valor":58.33,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-preta::COORDENATI":{"valor":59.3,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-preta::JACE":{"valor":59.3,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-preta::SEEDER":{"valor":59.29,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-verde::COORDENATI":{"valor":59.29,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-verde::JACE":{"valor":59.29,"data":"2026-08-31","origem":"planilha"},"camisa-polo-2-0-verde::SEEDER":{"valor":59.29,"data":"2026-08-31","origem":"planilha"},"camiseta-colaboradoras-azul::AEON":{"valor":35.6,"data":"2026-08-31","origem":"planilha"},"camiseta-colaboradoras-off-white::AEON":{"valor":34.6,"data":"2026-08-31","origem":"planilha"},"camiseta-colaboradoras-preta::AEON":{"valor":35.6,"data":"2026-08-31","origem":"planilha"},"camiseta-fitness-2-0-azul::AEON":{"valor":41.6,"data":"2026-08-31","origem":"planilha"},"camiseta-fitness-2-0-branca::AEON":{"valor":41.6,"data":"2026-08-31","origem":"planilha"},"camiseta-fitness-2-0-cinza::AEON":{"valor":41.6,"data":"2026-08-31","origem":"planilha"},"camiseta-fitness-2-0-preta::AEON":{"valor":41.6,"data":"2026-08-31","origem":"planilha"},"camiseta-fitness-ml-2-0-azul::AEON":{"valor":44.8,"data":"2026-08-31","origem":"planilha"},"camiseta-fitness-ml-2-0-branca::AEON":{"valor":44.8,"data":"2026-08-31","origem":"planilha"},"camiseta-fitness-ml-2-0-cinza::AEON":{"valor":44.8,"data":"2026-08-31","origem":"planilha"},"camiseta-fitness-ml-2-0-preta::AEON":{"valor":44.8,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-bege::BYCOTTON":{"valor":73.84,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-branca::BYCOTTON":{"valor":73.54,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-cinza::BYCOTTON":{"valor":73.54,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-marinho::BYCOTTON":{"valor":74,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-marrom::BYCOTTON":{"valor":73.54,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-preta::BYCOTTON":{"valor":73.49,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-longa-branca::BYCOTTON":{"valor":85.33,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-longa-marinho::BYCOTTON":{"valor":85.33,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-longa-marrom::BYCOTTON":{"valor":85.33,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-longa-preta::BYCOTTON":{"valor":85.33,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-bege::BYCOTTON":{"valor":73.84,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-branca::BYCOTTON":{"valor":73.54,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-cinza::BYCOTTON":{"valor":73.54,"data":"2026-07-30","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-marinho::BYCOTTON":{"valor":73.99,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-marrom::BYCOTTON":{"valor":73.54,"data":"2026-07-30","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-preta::BYCOTTON":{"valor":73.99,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-manga-longa-branca::BYCOTTON":{"valor":85.33,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-manga-longa-marinho::BYCOTTON":{"valor":86.39,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-manga-longa-marrom::BYCOTTON":{"valor":86.39,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-alta-pima-manga-longa-preta::BYCOTTON":{"valor":86.39,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-areia::AEON":{"valor":33.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-azul::AEON":{"valor":34.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-azul::BYCOTTON":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-azul::CAMPIOLLI":{"valor":36.22,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-azul::JACE":{"valor":37.04,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-azul-claro::AEON":{"valor":33.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-azul-claro::BYCOTTON":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-branca::CAMPIOLLI":{"valor":36.22,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-branca::INDORFF":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-branca-gt::AEON":{"valor":35.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-branca-gt::BYCOTTON":{"valor":31.87,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-branca-gt::CAMPIOLLI":{"valor":37.27,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-branca-gt::COORDENATI":{"valor":35.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-cinza::AEON":{"valor":34.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-cinza::CAMPIOLLI":{"valor":36.22,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-cinza-mescla::AEON":{"valor":38.63,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-cinza-mescla::CAMPIOLLI":{"valor":38.32,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-marrom::AEON":{"valor":34.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-marrom::BYCOTTON":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-marrom::CAMPIOLLI":{"valor":36.22,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-preta::AEON":{"valor":35.78,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-preta::BYCOTTON":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-preta::CAMPIOLLI":{"valor":36.22,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-preta::COORDENATI":{"valor":34.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-rosa::AEON":{"valor":33.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-verde::BYCOTTON":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-verde::CAMPIOLLI":{"valor":36.22,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-verde::INDORFF":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-verde::JACE":{"valor":37.04,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-verde-musgo::AEON":{"valor":34.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-verde-musgo::BYCOTTON":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-verde-musgo::CAMPIOLLI":{"valor":36.22,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-verde-musgo::COORDENATI":{"valor":34.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-1-0-vinho::CAMPIOLLI":{"valor":36.22,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-areia::BYCOTTON":{"valor":36.24,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-azul::BYCOTTON":{"valor":36.24,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-azul::JACE":{"valor":37.04,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-bege::BYCOTTON":{"valor":36.24,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-branca::AEON":{"valor":32.85,"data":"2026-08-10","origem":"planilha"},"camiseta-gola-o-2-0-branca::BYCOTTON":{"valor":36.55,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-branca::JACE":{"valor":37.04,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-cinza-clara::BYCOTTON":{"valor":36.24,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-cinza-escura::BYCOTTON":{"valor":36.24,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-cinza-escura::JACE":{"valor":37.04,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-marrom::BYCOTTON":{"valor":36.24,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-preta::AEON":{"valor":32.85,"data":"2026-08-10","origem":"planilha"},"camiseta-gola-o-2-0-preta::BYCOTTON":{"valor":36.24,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-preta::JACE":{"valor":37.04,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-verde::BYCOTTON":{"valor":36.24,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-verde::JACE":{"valor":37.04,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-o-2-0-vinho::BYCOTTON":{"valor":36.24,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-azul::AEON":{"valor":36.57,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-azul::CAMPIOLLI":{"valor":38.11,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-azul::INDORFF":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-azul::JACE":{"valor":37.04,"data":"2026-08-24","origem":"planilha"},"camiseta-gola-v-1-0-branca::CAMPIOLLI":{"valor":38.11,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-branca::INDORFF":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-branca::JACE":{"valor":37.04,"data":"2026-08-24","origem":"planilha"},"camiseta-gola-v-1-0-branca-gt::AEON":{"valor":36.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-branca-gt::CAMPIOLLI":{"valor":37.21,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-cinza::AEON":{"valor":36.57,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-cinza::CAMPIOLLI":{"valor":36.18,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-cinza-mescla::AEON":{"valor":38.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-preta::AEON":{"valor":35.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-preta::CAMPIOLLI":{"valor":38.11,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-preta::JACE":{"valor":37.04,"data":"2026-08-24","origem":"planilha"},"camiseta-gola-v-1-0-verde::AEON":{"valor":35.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-verde::CAMPIOLLI":{"valor":38.11,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-verde::INDORFF":{"valor":32.85,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-1-0-verde::JACE":{"valor":37.04,"data":"2026-08-24","origem":"planilha"},"camiseta-gola-v-2-0-azul::BYCOTTON":{"valor":37.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-2-0-branca::BYCOTTON":{"valor":37.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-2-0-cinza-escura::BYCOTTON":{"valor":37.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-2-0-preta::BYCOTTON":{"valor":37.5,"data":"2026-08-31","origem":"planilha"},"camiseta-gola-v-2-0-verde::BYCOTTON":{"valor":37.5,"data":"2026-08-31","origem":"planilha"},"camiseta-modal-tech-branca::COORDENATI":{"valor":37.96,"data":"2026-08-31","origem":"planilha"},"camiseta-modal-tech-preta::COORDENATI":{"valor":37.96,"data":"2026-08-31","origem":"planilha"},"cueca-branca::COMPANY MAN":{"valor":21.16,"data":"2026-08-31","origem":"planilha"},"cueca-branca::MASH":{"valor":24.89,"data":"2026-08-31","origem":"planilha"},"cueca-fitness-branca::MASH":{"valor":24.52,"data":"2026-08-31","origem":"planilha"},"cueca-fitness-preta::MASH":{"valor":24.02,"data":"2026-08-31","origem":"planilha"},"cueca-preta::COMPANY MAN":{"valor":21.2,"data":"2026-08-31","origem":"planilha"},"cueca-preta::MASH":{"valor":24.89,"data":"2026-08-31","origem":"planilha"},"polo-basica-azul-rochoso::BYCOTTON":{"valor":76.74,"data":"2026-08-31","origem":"planilha"},"polo-basica-azul-rochoso::JACE":{"valor":76.74,"data":"2026-08-31","origem":"planilha"},"polo-basica-branca::BYCOTTON":{"valor":76.74,"data":"2026-08-31","origem":"planilha"},"polo-basica-branca::JACE":{"valor":76.74,"data":"2026-08-31","origem":"planilha"},"polo-basica-cinza::BYCOTTON":{"valor":76.74,"data":"2026-08-31","origem":"planilha"},"polo-basica-cinza::JACE":{"valor":76.74,"data":"2026-08-31","origem":"planilha"},"polo-basica-preta::BYCOTTON":{"valor":76.74,"data":"2026-08-31","origem":"planilha"},"polo-basica-preta::JACE":{"valor":76.74,"data":"2026-08-31","origem":"planilha"},"tenis-nobuck-bege::FACTUM":{"valor":179.9,"data":"2026-08-31","origem":"planilha"},"tenis-nobuck-charuto::FACTUM":{"valor":179.9,"data":"2026-08-31","origem":"planilha"},"tenis-nobuck-marinho::FACTUM":{"valor":179.9,"data":"2026-08-31","origem":"planilha"},"tenis-nobuck-preto::FACTUM":{"valor":179.9,"data":"2026-08-31","origem":"planilha"},"tenis-nylon-cafe::FACTUM":{"valor":179.9,"data":"2026-08-31","origem":"planilha"},"tenis-nylon-marinho::FACTUM":{"valor":179.9,"data":"2026-08-31","origem":"planilha"},"tenis-nylon-preto::FACTUM":{"valor":179.9,"data":"2026-08-31","origem":"planilha"}};
+const PRECOS_BASE = {"bermuda-alfaiataria-azul-marinho::LÁBIOS DE MEL":{"valor":84.16,"data":"2026-09-01","origem":"planilha"},"bermuda-alfaiataria-caqui::LÁBIOS DE MEL":{"valor":84.16,"data":"2026-09-01","origem":"planilha"},"bermuda-alfaiataria-preta::LÁBIOS DE MEL":{"valor":87.9,"data":"2026-09-01","origem":"planilha"},"bermuda-comfort-azul::DOPIO":{"valor":126.2,"data":"2026-09-01","origem":"planilha"},"bermuda-comfort-caqui::DOPIO":{"valor":126.2,"data":"2026-09-01","origem":"planilha"},"bermuda-comfort-preta::DOPIO":{"valor":126.2,"data":"2026-09-01","origem":"planilha"},"bermuda-comfort-verde::DOPIO":{"valor":126.2,"data":"2026-09-01","origem":"planilha"},"bermuda-de-linho-caqui::LÁBIOS DE MEL":{"valor":99.25,"data":"2026-09-01","origem":"planilha"},"bermuda-de-linho-cru::LÁBIOS DE MEL":{"valor":99.25,"data":"2026-09-01","origem":"planilha"},"bermuda-de-linho-marinho::LÁBIOS DE MEL":{"valor":99.25,"data":"2026-09-01","origem":"planilha"},"bermuda-de-linho-preta::LÁBIOS DE MEL":{"valor":99.25,"data":"2026-09-01","origem":"planilha"},"bermuda-verao-26-bege::LÁBIOS DE MEL":{"valor":96,"data":"2026-07-31","origem":"mapao"},"bermuda-verao-26-verde::LÁBIOS DE MEL":{"valor":96,"data":"2026-07-31","origem":"mapao"},"calca-alfaiataria-azul::LÁBIOS DE MEL":{"valor":103,"data":"2026-09-01","origem":"planilha"},"calca-alfaiataria-azul::VAPE":{"valor":105,"data":"2026-09-01","origem":"planilha"},"calca-alfaiataria-caqui::LÁBIOS DE MEL":{"valor":103,"data":"2026-09-01","origem":"planilha"},"calca-alfaiataria-caqui::VAPE":{"valor":105,"data":"2026-09-01","origem":"planilha"},"calca-alfaiataria-cinza::LÁBIOS DE MEL":{"valor":103,"data":"2026-09-01","origem":"planilha"},"calca-alfaiataria-cinza::VAPE":{"valor":105,"data":"2026-09-01","origem":"planilha"},"calca-alfaiataria-preta::LÁBIOS DE MEL":{"valor":103,"data":"2026-09-01","origem":"planilha"},"calca-alfaiataria-preta::VAPE":{"valor":105,"data":"2026-09-01","origem":"planilha"},"calca-comfort-azul::DOPIO":{"valor":145.3,"data":"2026-09-01","origem":"planilha"},"calca-comfort-azul::LÁBIOS DE MEL":{"valor":113,"data":"2026-09-01","origem":"planilha"},"calca-comfort-caqui::DOPIO":{"valor":145.3,"data":"2026-09-01","origem":"planilha"},"calca-comfort-cinza::DOPIO":{"valor":145.3,"data":"2026-09-01","origem":"planilha"},"calca-comfort-marrom::DOPIO":{"valor":145.3,"data":"2026-09-01","origem":"planilha"},"calca-comfort-marrom::LÁBIOS DE MEL":{"valor":113,"data":"2026-09-01","origem":"planilha"},"calca-comfort-preta::DOPIO":{"valor":145.3,"data":"2026-09-01","origem":"planilha"},"calca-comfort-verde-militar::DOPIO":{"valor":145.3,"data":"2026-09-01","origem":"planilha"},"calca-de-linho-caqui::LÁBIOS DE MEL":{"valor":124.25,"data":"2026-09-01","origem":"planilha"},"calca-de-linho-cru::LÁBIOS DE MEL":{"valor":124.25,"data":"2026-09-01","origem":"planilha"},"calca-de-linho-marinho::LÁBIOS DE MEL":{"valor":124.25,"data":"2026-09-01","origem":"planilha"},"calca-de-linho-preta::LÁBIOS DE MEL":{"valor":124.25,"data":"2026-09-01","origem":"planilha"},"calca-jeans-2-0-azul-claro::DOPIO":{"valor":114,"data":"2026-09-01","origem":"planilha"},"calca-jeans-2-0-azul-escuro::DOPIO":{"valor":114,"data":"2026-09-01","origem":"planilha"},"calca-jeans-2-0-preta::DOPIO":{"valor":114,"data":"2026-09-01","origem":"planilha"},"calca-jeans-moletom-lavagem-clara::VANELISE":{"valor":114,"data":"2026-09-01","origem":"planilha"},"calca-jeans-moletom-lavagem-escura::VANELISE":{"valor":114,"data":"2026-09-01","origem":"planilha"},"calca-jeans-moletom-preta::VANELISE":{"valor":114,"data":"2026-09-01","origem":"planilha"},"calca-verao-26-areia::LÁBIOS DE MEL":{"valor":112,"data":"2026-07-31","origem":"mapao"},"calca-verao-26-marrom::LÁBIOS DE MEL":{"valor":112,"data":"2026-07-31","origem":"mapao"},"camisa-polo-2-0-azul-marinho::COORDENATI":{"valor":59.29,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-azul-marinho::JACE":{"valor":59.29,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-azul-marinho::SEEDER":{"valor":59.29,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-branca::COORDENATI":{"valor":58.33,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-branca::JACE":{"valor":58.33,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-branca::SEEDER":{"valor":59.29,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-marrom::JACE":{"valor":58.33,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-preta::COORDENATI":{"valor":59.3,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-preta::JACE":{"valor":59.3,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-preta::SEEDER":{"valor":59.29,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-verde::COORDENATI":{"valor":59.29,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-verde::JACE":{"valor":59.29,"data":"2026-09-01","origem":"planilha"},"camisa-polo-2-0-verde::SEEDER":{"valor":59.29,"data":"2026-09-01","origem":"planilha"},"camiseta-colaboradoras-azul::AEON":{"valor":35.6,"data":"2026-09-01","origem":"planilha"},"camiseta-colaboradoras-off-white::AEON":{"valor":34.6,"data":"2026-09-01","origem":"planilha"},"camiseta-colaboradoras-preta::AEON":{"valor":35.6,"data":"2026-09-01","origem":"planilha"},"camiseta-fitness-2-0-azul::AEON":{"valor":41.6,"data":"2026-09-01","origem":"planilha"},"camiseta-fitness-2-0-branca::AEON":{"valor":41.6,"data":"2026-09-01","origem":"planilha"},"camiseta-fitness-2-0-cinza::AEON":{"valor":41.6,"data":"2026-09-01","origem":"planilha"},"camiseta-fitness-2-0-preta::AEON":{"valor":41.6,"data":"2026-09-01","origem":"planilha"},"camiseta-fitness-ml-2-0-azul::AEON":{"valor":44.8,"data":"2026-09-01","origem":"planilha"},"camiseta-fitness-ml-2-0-branca::AEON":{"valor":44.8,"data":"2026-09-01","origem":"planilha"},"camiseta-fitness-ml-2-0-cinza::AEON":{"valor":44.8,"data":"2026-09-01","origem":"planilha"},"camiseta-fitness-ml-2-0-preta::AEON":{"valor":44.8,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-bege::BYCOTTON":{"valor":73.84,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-branca::BYCOTTON":{"valor":73.54,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-cinza::BYCOTTON":{"valor":73.54,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-marinho::BYCOTTON":{"valor":74,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-marrom::BYCOTTON":{"valor":73.54,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-curta-preta::BYCOTTON":{"valor":73.49,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-longa-branca::BYCOTTON":{"valor":85.33,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-longa-marinho::BYCOTTON":{"valor":85.33,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-longa-marrom::BYCOTTON":{"valor":85.33,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-c-et-manga-longa-preta::BYCOTTON":{"valor":85.33,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-bege::BYCOTTON":{"valor":73.84,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-branca::BYCOTTON":{"valor":73.54,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-cinza::BYCOTTON":{"valor":73.54,"data":"2026-07-30","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-marinho::BYCOTTON":{"valor":73.99,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-marrom::BYCOTTON":{"valor":73.54,"data":"2026-07-30","origem":"planilha"},"camiseta-gola-alta-pima-manga-curta-preta::BYCOTTON":{"valor":73.99,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-manga-longa-branca::BYCOTTON":{"valor":85.33,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-manga-longa-marinho::BYCOTTON":{"valor":86.39,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-manga-longa-marrom::BYCOTTON":{"valor":86.39,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-alta-pima-manga-longa-preta::BYCOTTON":{"valor":86.39,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-areia::AEON":{"valor":33.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-azul::AEON":{"valor":34.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-azul::BYCOTTON":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-azul::CAMPIOLLI":{"valor":36.22,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-azul::JACE":{"valor":37.04,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-azul-claro::AEON":{"valor":33.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-azul-claro::BYCOTTON":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-branca::CAMPIOLLI":{"valor":36.22,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-branca::INDORFF":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-branca-gt::AEON":{"valor":35.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-branca-gt::BYCOTTON":{"valor":31.87,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-branca-gt::CAMPIOLLI":{"valor":37.27,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-branca-gt::COORDENATI":{"valor":35.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-cinza::AEON":{"valor":34.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-cinza::CAMPIOLLI":{"valor":36.22,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-cinza-mescla::AEON":{"valor":38.63,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-cinza-mescla::CAMPIOLLI":{"valor":38.32,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-marrom::AEON":{"valor":34.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-marrom::BYCOTTON":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-marrom::CAMPIOLLI":{"valor":36.22,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-preta::AEON":{"valor":35.78,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-preta::BYCOTTON":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-preta::CAMPIOLLI":{"valor":36.22,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-preta::COORDENATI":{"valor":34.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-rosa::AEON":{"valor":33.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-verde::BYCOTTON":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-verde::CAMPIOLLI":{"valor":36.22,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-verde::INDORFF":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-verde::JACE":{"valor":37.04,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-verde-musgo::AEON":{"valor":34.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-verde-musgo::BYCOTTON":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-verde-musgo::CAMPIOLLI":{"valor":36.22,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-verde-musgo::COORDENATI":{"valor":34.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-1-0-vinho::CAMPIOLLI":{"valor":36.22,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-areia::BYCOTTON":{"valor":36.24,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-azul::BYCOTTON":{"valor":36.24,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-azul::JACE":{"valor":37.04,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-bege::BYCOTTON":{"valor":36.24,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-branca::AEON":{"valor":32.85,"data":"2026-08-10","origem":"planilha"},"camiseta-gola-o-2-0-branca::BYCOTTON":{"valor":36.55,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-branca::JACE":{"valor":37.04,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-cinza-clara::BYCOTTON":{"valor":36.24,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-cinza-escura::BYCOTTON":{"valor":36.24,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-cinza-escura::JACE":{"valor":37.04,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-marrom::BYCOTTON":{"valor":36.24,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-preta::AEON":{"valor":32.85,"data":"2026-08-10","origem":"planilha"},"camiseta-gola-o-2-0-preta::BYCOTTON":{"valor":36.24,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-preta::JACE":{"valor":37.04,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-verde::BYCOTTON":{"valor":36.24,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-verde::JACE":{"valor":37.04,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-o-2-0-vinho::BYCOTTON":{"valor":36.24,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-azul::AEON":{"valor":36.57,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-azul::CAMPIOLLI":{"valor":38.11,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-azul::INDORFF":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-azul::JACE":{"valor":37.04,"data":"2026-08-24","origem":"planilha"},"camiseta-gola-v-1-0-branca::CAMPIOLLI":{"valor":38.11,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-branca::INDORFF":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-branca::JACE":{"valor":37.04,"data":"2026-08-24","origem":"planilha"},"camiseta-gola-v-1-0-branca-gt::AEON":{"valor":36.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-branca-gt::CAMPIOLLI":{"valor":37.21,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-cinza::AEON":{"valor":36.57,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-cinza::CAMPIOLLI":{"valor":36.18,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-cinza-mescla::AEON":{"valor":38.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-preta::AEON":{"valor":35.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-preta::CAMPIOLLI":{"valor":38.11,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-preta::JACE":{"valor":37.04,"data":"2026-08-24","origem":"planilha"},"camiseta-gola-v-1-0-verde::AEON":{"valor":35.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-verde::CAMPIOLLI":{"valor":38.11,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-verde::INDORFF":{"valor":32.85,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-1-0-verde::JACE":{"valor":37.04,"data":"2026-08-24","origem":"planilha"},"camiseta-gola-v-2-0-azul::BYCOTTON":{"valor":37.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-2-0-branca::BYCOTTON":{"valor":37.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-2-0-cinza-escura::BYCOTTON":{"valor":37.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-2-0-preta::BYCOTTON":{"valor":37.5,"data":"2026-09-01","origem":"planilha"},"camiseta-gola-v-2-0-verde::BYCOTTON":{"valor":37.5,"data":"2026-09-01","origem":"planilha"},"camiseta-modal-tech-branca::COORDENATI":{"valor":37.96,"data":"2026-09-01","origem":"planilha"},"camiseta-modal-tech-preta::COORDENATI":{"valor":37.96,"data":"2026-09-01","origem":"planilha"},"cueca-branca::COMPANY MAN":{"valor":21.16,"data":"2026-09-01","origem":"planilha"},"cueca-branca::MASH":{"valor":24.89,"data":"2026-09-01","origem":"planilha"},"cueca-fitness-branca::MASH":{"valor":24.52,"data":"2026-09-01","origem":"planilha"},"cueca-fitness-preta::MASH":{"valor":24.02,"data":"2026-09-01","origem":"planilha"},"cueca-preta::COMPANY MAN":{"valor":21.2,"data":"2026-09-01","origem":"planilha"},"cueca-preta::MASH":{"valor":24.89,"data":"2026-09-01","origem":"planilha"},"polo-basica-azul-rochoso::BYCOTTON":{"valor":76.74,"data":"2026-09-01","origem":"planilha"},"polo-basica-azul-rochoso::JACE":{"valor":76.74,"data":"2026-09-01","origem":"planilha"},"polo-basica-branca::BYCOTTON":{"valor":76.74,"data":"2026-09-01","origem":"planilha"},"polo-basica-branca::JACE":{"valor":76.74,"data":"2026-09-01","origem":"planilha"},"polo-basica-cinza::BYCOTTON":{"valor":76.74,"data":"2026-09-01","origem":"planilha"},"polo-basica-cinza::JACE":{"valor":76.74,"data":"2026-09-01","origem":"planilha"},"polo-basica-preta::BYCOTTON":{"valor":76.74,"data":"2026-09-01","origem":"planilha"},"polo-basica-preta::JACE":{"valor":76.74,"data":"2026-09-01","origem":"planilha"},"tenis-nobuck-bege::FACTUM":{"valor":179.9,"data":"2026-09-01","origem":"planilha"},"tenis-nobuck-charuto::FACTUM":{"valor":179.9,"data":"2026-09-01","origem":"planilha"},"tenis-nobuck-marinho::FACTUM":{"valor":179.9,"data":"2026-09-01","origem":"planilha"},"tenis-nobuck-preto::FACTUM":{"valor":179.9,"data":"2026-09-01","origem":"planilha"},"tenis-nylon-cafe::FACTUM":{"valor":179.9,"data":"2026-09-01","origem":"planilha"},"tenis-nylon-marinho::FACTUM":{"valor":179.9,"data":"2026-09-01","origem":"planilha"},"tenis-nylon-preto::FACTUM":{"valor":179.9,"data":"2026-09-01","origem":"planilha"}};
 const RISCO_SACADO = {"parametros":{"taxaMinimal":0.016,"limiteDias":150},"itens":[{"produto_id":"camiseta-gola-alta-pima-manga-curta-marinho","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Curta Marinho","preco":73.98500000000001,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-fitness-ml-2-0-azul","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Fitness ML 2.0 Azul","preco":44.8,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"polo-basica-azul-rochoso","fornecedor_id":"jace","forn":"JACE","produto":"Polo Básica Azul Rochoso","preco":76.74,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"polo-basica-branca","fornecedor_id":"jace","forn":"JACE","produto":"Polo Básica Branca","preco":76.74,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-verde","fornecedor_id":"jace","forn":"JACE","produto":"Camisa Polo 2.0 Verde","preco":59.29,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-fitness-2-0-cinza","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Fitness 2.0 Cinza","preco":41.6,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"bermuda-alfaiataria-caqui","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Bermuda Alfaiataria Caqui","preco":84.16,"prazo_dias":150,"taxa_fornecedor":0.022,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"tenis-nobuck-charuto","fornecedor_id":"factum","forn":"FACTUM","produto":"Tênis Nobuck Charuto","preco":179.9,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-fitness-2-0-branca","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Fitness 2.0 Branca","preco":41.6,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-manga-longa-preta","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Longa Preta","preco":86.39,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-comfort-marrom","fornecedor_id":"dopio","forn":"DOPIO","produto":"Calça Comfort Marrom","preco":145.3,"prazo_dias":68.3,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"tenis-nylon-marinho","fornecedor_id":"factum","forn":"FACTUM","produto":"Tênis Nylon Marinho","preco":179.9,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-fitness-2-0-azul","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Fitness 2.0 Azul","preco":41.6,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-colaboradoras-preta","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Colaboradoras Preta","preco":35.6,"prazo_dias":74.9,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"tenis-nobuck-bege","fornecedor_id":"factum","forn":"FACTUM","produto":"Tênis Nobuck Bege","preco":179.9,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-fitness-2-0-preta","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Fitness 2.0 Preta","preco":41.6,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":1,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"manual","ehRiscoSacado":true,"origemMarcacao":"informado"},{"produto_id":"camisa-polo-2-0-azul-marinho","fornecedor_id":"jace","forn":"JACE","produto":"Camisa Polo 2.0 Azul Marinho","preco":59.29,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-comfort-caqui","fornecedor_id":"dopio","forn":"DOPIO","produto":"Calça Comfort Caqui","preco":145.3,"prazo_dias":64.7,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-fitness-ml-2-0-branca","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Fitness ML 2.0 Branca","preco":44.8,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-manga-curta-branca","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Curta Branca","preco":73.54,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"tenis-nobuck-marinho","fornecedor_id":"factum","forn":"FACTUM","produto":"Tênis Nobuck Marinho","preco":179.9,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"tenis-nobuck-preto","fornecedor_id":"factum","forn":"FACTUM","produto":"Tênis Nobuck Preto","preco":179.9,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"polo-basica-cinza","fornecedor_id":"jace","forn":"JACE","produto":"Polo Básica Cinza","preco":76.74,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"calca-comfort-azul","fornecedor_id":"dopio","forn":"DOPIO","produto":"Calça Comfort Azul","preco":145.3,"prazo_dias":67.3,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-manga-curta-bege","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Curta Bege","preco":73.84,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-comfort-preta","fornecedor_id":"dopio","forn":"DOPIO","produto":"Calça Comfort Preta","preco":145.3,"prazo_dias":71.7,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-colaboradoras-off-white","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Colaboradoras Off-white","preco":34.6,"prazo_dias":74.9,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-manga-longa-marrom","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Longa Marrom","preco":86.39,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-branca","fornecedor_id":"jace","forn":"JACE","produto":"Camisa Polo 2.0 Branca","preco":58.33,"prazo_dias":76.4,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-manga-longa-marinho","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Longa Marinho","preco":86.39,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"tenis-nylon-cafe","fornecedor_id":"factum","forn":"FACTUM","produto":"Tênis Nylon Café","preco":179.9,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-preta","fornecedor_id":"jace","forn":"JACE","produto":"Camisa Polo 2.0 Preta","preco":59.3,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-marrom","fornecedor_id":"jace","forn":"JACE","produto":"Camisa Polo 2.0 Marrom","preco":58.33,"prazo_dias":83.9,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-manga-curta-preta","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Curta Preta","preco":73.98500000000001,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-manga-longa-branca","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Longa Branca","preco":85.33,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-colaboradoras-azul","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Colaboradoras Azul","preco":35.6,"prazo_dias":74.9,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-fitness-ml-2-0-preta","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Fitness ML 2.0 Preta","preco":44.8,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"calca-comfort-verde-militar","fornecedor_id":"dopio","forn":"DOPIO","produto":"Calça Comfort Verde Militar","preco":145.3,"prazo_dias":68.7,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-comfort-cinza","fornecedor_id":"dopio","forn":"DOPIO","produto":"Calça Comfort Cinza","preco":145.3,"prazo_dias":71,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-fitness-ml-2-0-cinza","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Fitness ML 2.0 Cinza","preco":44.8,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-azul-marinho","fornecedor_id":"coordenati","forn":"COORDENATI","produto":"Camisa Polo 2.0 Azul Marinho","preco":59.29,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"tenis-nylon-preto","fornecedor_id":"factum","forn":"FACTUM","produto":"Tênis Nylon Preto","preco":179.9,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"polo-basica-preta","fornecedor_id":"jace","forn":"JACE","produto":"Polo Básica Preta","preco":76.74,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-manga-curta-cinza","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Curta Cinza","preco":73.54,"prazo_dias":null,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":null,"ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-manga-curta-marrom","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima Manga Curta Marrom","preco":73.54,"prazo_dias":null,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":null,"ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-verde","fornecedor_id":"coordenati","forn":"COORDENATI","produto":"Camisa Polo 2.0 Verde","preco":59.29,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-alfaiataria-preta","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Bermuda Alfaiataria Preta","preco":87.9,"prazo_dias":64.7,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-alfaiataria-azul-marinho","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Bermuda Alfaiataria Azul Marinho","preco":84.16,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"calca-verao-26-areia","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça Verão 26 Areia","preco":112,"prazo_dias":null,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"mapao","prazo_origem":null,"ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-verao-26-marrom","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça Verão 26 Marrom","preco":112,"prazo_dias":null,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"mapao","prazo_origem":null,"ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-verao-26-bege","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Bermuda Verão 26 Bege","preco":96,"prazo_dias":null,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"mapao","prazo_origem":null,"ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-verao-26-verde","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Bermuda Verão 26 Verde","preco":96,"prazo_dias":null,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"mapao","prazo_origem":null,"ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-de-linho-preta","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça de Linho Preta","preco":124.25,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-de-linho-cru","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça de Linho Cru","preco":124.25,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-de-linho-caqui","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça de Linho Caqui","preco":124.25,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-de-linho-preta","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Bermuda de Linho Preta","preco":99.25,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-de-linho-cru","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Bermuda de Linho Cru","preco":99.25,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-de-linho-caqui","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Bermuda de Linho Caqui","preco":99.25,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-comfort-azul","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça Comfort Azul","preco":113,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"calca-comfort-marrom","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça Comfort Marrom","preco":113,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-preta","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola V 1.0 Preta","preco":35.5,"prazo_dias":69,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-verde-musgo","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Verde Musgo","preco":34.5,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-marrom","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Marrom","preco":34.5,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-azul-claro","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Azul Claro","preco":33.5,"prazo_dias":63.2,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-azul","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola V 1.0 Azul","preco":36.57,"prazo_dias":74.5,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-azul","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Azul","preco":34.5,"prazo_dias":101,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-preta","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Preta","preco":35.78,"prazo_dias":86.7,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-cinza","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola V 1.0 Cinza","preco":36.57,"prazo_dias":73.4,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-cinza-mescla","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Cinza Mescla","preco":38.63,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-verde","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola V 1.0 Verde","preco":35.5,"prazo_dias":70.6,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-areia","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Areia","preco":33.5,"prazo_dias":65.6,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-branca","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Branca","preco":36.55,"prazo_dias":77.9,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-preta","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Preta","preco":36.24,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-branca-gt","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola V 1.0 Branca GT","preco":36.5,"prazo_dias":63.7,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-branca-gt","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola V 1.0 Branca GT","preco":37.205,"prazo_dias":70.8,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-branca-gt","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Branca GT","preco":35.5,"prazo_dias":86.7,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-jeans-2-0-azul-escuro","fornecedor_id":"dopio","forn":"DOPIO","produto":"Calça Jeans 2.0 Azul Escuro","preco":114,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-jeans-2-0-azul-claro","fornecedor_id":"dopio","forn":"DOPIO","produto":"Calça Jeans 2.0 Azul Claro","preco":114,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-jeans-2-0-preta","fornecedor_id":"dopio","forn":"DOPIO","produto":"Calça Jeans 2.0 Preta","preco":114,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-branca","fornecedor_id":"seeder","forn":"SEEDER","produto":"Camisa Polo 2.0 Branca","preco":59.29,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-preta","fornecedor_id":"seeder","forn":"SEEDER","produto":"Camisa Polo 2.0 Preta","preco":59.29,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-azul-marinho","fornecedor_id":"seeder","forn":"SEEDER","produto":"Camisa Polo 2.0 Azul Marinho","preco":59.29,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"calca-jeans-moletom-lavagem-clara","fornecedor_id":"vanelise","forn":"VANELISE","produto":"Calça Jeans Moletom Lavagem Clara","preco":114,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-jeans-moletom-lavagem-escura","fornecedor_id":"vanelise","forn":"VANELISE","produto":"Calça Jeans Moletom Lavagem Escura","preco":114,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-jeans-moletom-preta","fornecedor_id":"vanelise","forn":"VANELISE","produto":"Calça Jeans Moletom Preta","preco":114,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-alfaiataria-azul","fornecedor_id":"vape","forn":"VAPE","produto":"Calça Alfaiataria Azul","preco":105,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-alfaiataria-caqui","fornecedor_id":"vape","forn":"VAPE","produto":"Calça Alfaiataria Caqui","preco":105,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-alfaiataria-cinza","fornecedor_id":"vape","forn":"VAPE","produto":"Calça Alfaiataria Cinza","preco":105,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-alfaiataria-preta","fornecedor_id":"vape","forn":"VAPE","produto":"Calça Alfaiataria Preta","preco":105,"prazo_dias":60.1,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"cueca-fitness-preta","fornecedor_id":"mash","forn":"MASH","produto":"Cueca Fitness Preta","preco":24.02,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"cueca-preta","fornecedor_id":"mash","forn":"MASH","produto":"Cueca Preta","preco":24.89,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"cueca-branca","fornecedor_id":"mash","forn":"MASH","produto":"Cueca Branca","preco":24.89,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"cueca-fitness-branca","fornecedor_id":"mash","forn":"MASH","produto":"Cueca Fitness Branca","preco":24.52,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-preta","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Preta","preco":36.22,"prazo_dias":72.5,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-branca-gt","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Branca GT","preco":37.27,"prazo_dias":72,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-cinza","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Cinza","preco":36.22,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-azul","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Azul","preco":36.22,"prazo_dias":74,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-preta","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola V 1.0 Preta","preco":38.11,"prazo_dias":71.9,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-cinza","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola V 1.0 Cinza","preco":36.18,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-azul","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola V 1.0 Azul","preco":38.11,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-verde","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Verde","preco":36.22,"prazo_dias":74.3,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-cinza-mescla","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Cinza Mescla","preco":38.32,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-marrom","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Marrom","preco":36.22,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-verde-musgo","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Verde Musgo","preco":36.22,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-vinho","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Vinho","preco":36.22,"prazo_dias":73.3,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-branca","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola O 1.0 Branca","preco":36.22,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-branca","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola V 1.0 Branca","preco":38.11,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-verde","fornecedor_id":"campiolli","forn":"CAMPIOLLI","produto":"Camiseta Gola V 1.0 Verde","preco":38.11,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-cinza","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Cinza","preco":34.5,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-rosa","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 1.0 Rosa","preco":33.5,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-cinza-mescla","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola V 1.0 Cinza Mescla","preco":38.5,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-branca","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 2.0 Branca","preco":32.85,"prazo_dias":null,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":null,"ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-preta","fornecedor_id":"aeon","forn":"AEON","produto":"Camiseta Gola O 2.0 Preta","preco":32.85,"prazo_dias":null,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":null,"ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-preta","fornecedor_id":"coordenati","forn":"COORDENATI","produto":"Camiseta Gola O 1.0 Preta","preco":34.5,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-branca-gt","fornecedor_id":"coordenati","forn":"COORDENATI","produto":"Camiseta Gola O 1.0 Branca GT","preco":35.5,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-preta","fornecedor_id":"coordenati","forn":"COORDENATI","produto":"Camisa Polo 2.0 Preta","preco":59.3,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-branca","fornecedor_id":"coordenati","forn":"COORDENATI","produto":"Camisa Polo 2.0 Branca","preco":58.33,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-modal-tech-preta","fornecedor_id":"coordenati","forn":"COORDENATI","produto":"Camiseta Modal Tech Preta","preco":37.96,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-modal-tech-branca","fornecedor_id":"coordenati","forn":"COORDENATI","produto":"Camiseta Modal Tech Branca","preco":37.96,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-verde-musgo","fornecedor_id":"coordenati","forn":"COORDENATI","produto":"Camiseta Gola O 1.0 Verde Musgo","preco":34.5,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"polo-basica-cinza","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Polo Básica Cinza","preco":76.74,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camisa-polo-2-0-verde","fornecedor_id":"seeder","forn":"SEEDER","produto":"Camisa Polo 2.0 Verde","preco":59.29,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-preta","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 1.0 Preta","preco":32.85,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-verde","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 1.0 Verde","preco":32.85,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-branca-gt","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 1.0 Branca GT","preco":31.87,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-azul","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 1.0 Azul","preco":32.85,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-azul-claro","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 1.0 Azul Claro","preco":32.85,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-marrom","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 1.0 Marrom","preco":32.85,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-verde-musgo","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 1.0 Verde Musgo","preco":32.85,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"polo-basica-azul-rochoso","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Polo Básica Azul Rochoso","preco":76.74,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"polo-basica-preta","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Polo Básica Preta","preco":76.74,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"polo-basica-branca","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Polo Básica Branca","preco":76.74,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-azul","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Azul","preco":36.24,"prazo_dias":120.1,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-cinza-escura","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Cinza Escura","preco":36.24,"prazo_dias":120.7,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-verde","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Verde","preco":36.24,"prazo_dias":125,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-comfort-azul","fornecedor_id":"dopio","forn":"DOPIO","produto":"Bermuda Comfort Azul","preco":126.2,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-comfort-verde","fornecedor_id":"dopio","forn":"DOPIO","produto":"Bermuda Comfort Verde","preco":126.2,"prazo_dias":60.1,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-comfort-caqui","fornecedor_id":"dopio","forn":"DOPIO","produto":"Bermuda Comfort Caqui","preco":126.2,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-comfort-preta","fornecedor_id":"dopio","forn":"DOPIO","produto":"Bermuda Comfort Preta","preco":126.2,"prazo_dias":60,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-de-linho-marinho","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça de Linho Marinho","preco":124.25,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"bermuda-de-linho-marinho","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Bermuda de Linho Marinho","preco":99.25,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"calca-alfaiataria-azul","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça Alfaiataria Azul","preco":103,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"calca-alfaiataria-caqui","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça Alfaiataria Caqui","preco":103,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"calca-alfaiataria-cinza","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça Alfaiataria Cinza","preco":103,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"calca-alfaiataria-preta","fornecedor_id":"labios-de-mel","forn":"LÁBIOS DE MEL","produto":"Calça Alfaiataria Preta","preco":103,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"cueca-branca","fornecedor_id":"company-man","forn":"COMPANY MAN","produto":"Cueca Branca","preco":21.16,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"cueca-preta","fornecedor_id":"company-man","forn":"COMPANY MAN","produto":"Cueca Preta","preco":21.2,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-branca","fornecedor_id":"indorff","forn":"INDORFF","produto":"Camiseta Gola O 1.0 Branca","preco":32.85,"prazo_dias":120,"taxa_fornecedor":0.03,"risco_sacado":1,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"manual","ehRiscoSacado":true,"origemMarcacao":"informado"},{"produto_id":"camiseta-gola-o-1-0-verde","fornecedor_id":"indorff","forn":"INDORFF","produto":"Camiseta Gola O 1.0 Verde","preco":32.85,"prazo_dias":120,"taxa_fornecedor":null,"risco_sacado":1,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"manual","ehRiscoSacado":true,"origemMarcacao":"informado"},{"produto_id":"camiseta-gola-v-1-0-verde","fornecedor_id":"indorff","forn":"INDORFF","produto":"Camiseta Gola V 1.0 Verde","preco":32.85,"prazo_dias":120,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-branca","fornecedor_id":"indorff","forn":"INDORFF","produto":"Camiseta Gola V 1.0 Branca","preco":32.85,"prazo_dias":120,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-azul","fornecedor_id":"indorff","forn":"INDORFF","produto":"Camiseta Gola V 1.0 Azul","preco":32.85,"prazo_dias":120,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-azul","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola O 1.0 Azul","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-1-0-verde","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola O 1.0 Verde","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-verde","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola V 1.0 Verde","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-branca","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola V 1.0 Branca","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-azul","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola V 1.0 Azul","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-1-0-preta","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola V 1.0 Preta","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-areia","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Areia","preco":36.24,"prazo_dias":135.4,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-bege","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Bege","preco":36.24,"prazo_dias":135.5,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-cinza-clara","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Cinza Clara","preco":36.24,"prazo_dias":135.2,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-marrom","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Marrom","preco":36.24,"prazo_dias":135.2,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-vinho","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola O 2.0 Vinho","preco":36.24,"prazo_dias":135,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-2-0-azul","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola V 2.0 Azul","preco":37.5,"prazo_dias":134.7,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-2-0-branca","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola V 2.0 Branca","preco":37.5,"prazo_dias":135,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-2-0-cinza-escura","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola V 2.0 Cinza Escura","preco":37.5,"prazo_dias":135.4,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-2-0-preta","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola V 2.0 Preta","preco":37.5,"prazo_dias":134.9,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-v-2-0-verde","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola V 2.0 Verde","preco":37.5,"prazo_dias":135.2,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-longa-marrom","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Longa Marrom","preco":85.33,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-longa-marinho","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Longa Marinho","preco":85.33,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-longa-preta","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Longa Preta","preco":85.33,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-longa-branca","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Longa Branca","preco":85.33,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-curta-marinho","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Curta Marinho","preco":73.995,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-curta-preta","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Curta Preta","preco":73.48500000000001,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-curta-bege","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Curta Bege","preco":73.84,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-curta-branca","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Curta Branca","preco":73.54,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-curta-cinza","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Curta Cinza","preco":73.54,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-alta-pima-c-et-manga-curta-marrom","fornecedor_id":"bycotton","forn":"BYCOTTON","produto":"Camiseta Gola Alta Pima C/ET Manga Curta Marrom","preco":73.54,"prazo_dias":75,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":false,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-azul","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola O 2.0 Azul","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-preta","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola O 2.0 Preta","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-branca","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola O 2.0 Branca","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-cinza-escura","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola O 2.0 Cinza Escura","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"},{"produto_id":"camiseta-gola-o-2-0-verde","fornecedor_id":"jace","forn":"JACE","produto":"Camiseta Gola O 2.0 Verde","preco":37.04,"prazo_dias":150,"taxa_fornecedor":null,"risco_sacado":null,"rs_observacao":null,"origem_preco":"planilha","prazo_origem":"planilha","ehRiscoSacado":true,"origemMarcacao":"prazo"}],"resumo":{"vinculos":183,"emRiscoSacado":44,"informados":3,"semPrazo":8,"prazoMedio":96.2}};
 const LIMITE_RS = {"saldo":[{"mes":"2026-09","entra":785675.18,"sai":0,"saldo":785675.18},{"mes":"2026-10","entra":1054967.5,"sai":0,"saldo":1840642.6800000002},{"mes":"2026-11","entra":1721454.14,"sai":0,"saldo":3562096.8200000003},{"mes":"2026-12","entra":2015156.5800000005,"sai":0,"saldo":5577253.4},{"mes":"2027-01","entra":185199.99999999997,"sai":0,"saldo":5762453.4},{"mes":"2027-02","entra":0,"sai":785675.18,"saldo":4976778.220000001},{"mes":"2027-03","entra":0,"sai":1054967.5,"saldo":3921810.7200000007},{"mes":"2027-04","entra":0,"sai":1721454.14,"saldo":2200356.580000001},{"mes":"2027-05","entra":0,"sai":2015156.5800000005,"saldo":185200.00000000047},{"mes":"2027-06","entra":0,"sai":185199.99999999997,"saldo":4.94765117764473e-10}],"picoSaldo":{"mes":"2027-01","entra":185199.99999999997,"sai":0,"saldo":5762453.4},"saldoPorForn":{"AEON":[{"mes":"2026-09","entra":224736,"sai":0,"saldo":224736},{"mes":"2026-10","entra":549195.7,"sai":0,"saldo":773931.7},{"mes":"2026-11","entra":491656.8,"sai":0,"saldo":1265588.5},{"mes":"2027-02","entra":0,"sai":224736,"saldo":1040852.5},{"mes":"2027-03","entra":0,"sai":549195.7,"saldo":491656.80000000005},{"mes":"2027-04","entra":0,"sai":491656.8,"saldo":5.820766091346741e-11}],"BYCOTTON":[{"mes":"2026-09","entra":191159.33999999997,"sai":0,"saldo":191159.33999999997},{"mes":"2026-11","entra":734559.6000000002,"sai":0,"saldo":925718.9400000002},{"mes":"2026-12","entra":1630107.0000000005,"sai":0,"saldo":2555825.9400000004},{"mes":"2027-02","entra":0,"sai":191159.33999999997,"saldo":2364666.6000000006},{"mes":"2027-04","entra":0,"sai":734559.6000000002,"saldo":1630107.0000000005},{"mes":"2027-05","entra":0,"sai":1630107.0000000005,"saldo":0}],"COMPANY MAN":[{"mes":"2026-09","entra":39992.4,"sai":0,"saldo":39992.4},{"mes":"2026-10","entra":118634.72,"sai":0,"saldo":158627.12},{"mes":"2027-02","entra":0,"sai":39992.4,"saldo":118634.72},{"mes":"2027-03","entra":0,"sai":118634.72,"saldo":0}],"JACE":[{"mes":"2026-09","entra":157777.43999999997,"sai":0,"saldo":157777.43999999997},{"mes":"2026-12","entra":385049.5800000001,"sai":0,"saldo":542827.02},{"mes":"2027-01","entra":185199.99999999997,"sai":0,"saldo":728027.02},{"mes":"2027-02","entra":0,"sai":157777.43999999997,"saldo":570249.5800000001},{"mes":"2027-05","entra":0,"sai":385049.5800000001,"saldo":185200},{"mes":"2027-06","entra":0,"sai":185199.99999999997,"saldo":2.9103830456733704e-11}],"LÁBIOS DE MEL":[{"mes":"2026-09","entra":172010,"sai":0,"saldo":172010},{"mes":"2026-10","entra":387137.08,"sai":0,"saldo":559147.0800000001},{"mes":"2026-11","entra":109497,"sai":0,"saldo":668644.0800000001},{"mes":"2027-02","entra":0,"sai":172010,"saldo":496634.0800000001},{"mes":"2027-03","entra":0,"sai":387137.08,"saldo":109497.00000000006},{"mes":"2027-04","entra":0,"sai":109497,"saldo":5.820766091346741e-11}],"SEEDER":[{"mes":"2026-11","entra":385740.74,"sai":0,"saldo":385740.74},{"mes":"2027-04","entra":0,"sai":385740.74,"saldo":0}]},"entrada":[{"mes":"2026-09","valor":785675.18},{"mes":"2026-10","valor":1054967.5},{"mes":"2026-11","valor":1721454.14},{"mes":"2026-12","valor":2015156.5800000005},{"mes":"2027-01","valor":185199.99999999997}],"vencimento":[{"mes":"2027-02","valor":785675.18},{"mes":"2027-03","valor":1054967.5},{"mes":"2027-04","valor":1721454.14},{"mes":"2027-05","valor":2015156.5800000005},{"mes":"2027-06","valor":185199.99999999997}],"fornecedores":[{"forn":"BYCOTTON","valor":2555825.9400000004,"meses":{"2026-09":191159.33999999997,"2026-11":734559.6000000002,"2026-12":1630107.0000000005},"mesesVenc":{"2027-02":191159.33999999997,"2027-04":734559.6000000002,"2027-05":1630107.0000000005},"pct":44.3530864822265,"pedidos":67,"saque":2360819.2292118943,"deposito":195006.71078810608},{"forn":"AEON","valor":1265588.5,"meses":{"2026-09":224736,"2026-10":549195.7,"2026-11":491656.8},"mesesVenc":{"2027-02":224736,"2027-03":549195.7,"2027-04":491656.8},"pct":21.962667845608966,"pedidos":29,"saque":1169025.4881243738,"deposito":96563.01187562617},{"forn":"JACE","valor":728027.0199999999,"meses":{"2026-09":157777.43999999997,"2026-12":385049.5800000001,"2027-01":185199.99999999997},"mesesVenc":{"2027-02":157777.43999999997,"2027-05":385049.5800000001,"2027-06":185199.99999999997},"pct":12.633976701659751,"pedidos":15,"saque":672479.3583563956,"deposito":55547.66164360428},{"forn":"LÁBIOS DE MEL","valor":668644.0800000001,"meses":{"2026-10":387137.08,"2026-09":172010,"2026-11":109497},"mesesVenc":{"2027-03":387137.08,"2027-02":172010,"2027-04":109497},"pct":11.603461817148931,"pedidos":13,"saque":617627.2714262756,"deposito":51016.80857372447},{"forn":"SEEDER","valor":385740.74,"meses":{"2026-11":385740.74},"mesesVenc":{"2027-04":385740.74},"pct":6.694036606005355,"pedidos":5,"saque":356309.1454038633,"deposito":29431.59459613671},{"forn":"COMPANY MAN","valor":158627.12000000002,"meses":{"2026-10":118634.72,"2026-09":39992.4},"mesesVenc":{"2027-03":118634.72,"2027-02":39992.4},"pct":2.752770547350545,"pedidos":3,"saque":146524.04504921124,"deposito":12103.074950788781}],"antecipBanco":[{"mes":"2026-09","valor":725729.027094277},{"mes":"2026-10","valor":974474.6389864087},{"mes":"2026-11","valor":1590109.080714011},{"mes":"2026-12","valor":1861402.3472728652},{"mes":"2027-01","valor":171069.4435044519}],"antecipNos":[{"mes":"2026-09","valor":59946.15290572308},{"mes":"2026-10","valor":80492.86101359129},{"mes":"2026-11","valor":131345.0592859888},{"mes":"2026-12","valor":153754.2327271353},{"mes":"2027-01","valor":14130.55649554808}],"operacional":[{"mes":"2026-09","pedidos":29,"valor":785675.18,"antecipado":59946.15290572308},{"mes":"2026-10","pedidos":16,"valor":1054967.5,"antecipado":80492.86101359129},{"mes":"2026-11","pedidos":31,"valor":1721454.14,"antecipado":131345.0592859888},{"mes":"2026-12","pedidos":51,"valor":2015156.5800000005,"antecipado":153754.2327271353},{"mes":"2027-01","pedidos":5,"valor":185199.99999999997,"antecipado":14130.55649554808}],"antecipacao":{"taxa":0.016,"dias":150,"fator":0.9237010988361335,"banco":5322784.537572011,"nos":439668.8624279862,"pctDesconto":7.629890116386651},"resumo":{"total":5762453.399999998,"foraRS":35514865.69999996,"pedidos":132,"pctDaCarteira":13.960338330209055,"picoEntrada":2015156.5800000005,"picoVencimento":2015156.5800000005},"limites":[5000000,7500000,10000000,15000000,20000000,30000000]};
 const CADASTRO_RS = [{"fornecedor_id":"abba","nome":"ABBA","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"aeon","nome":"AEON","risco_sacado":1,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"bycotton","nome":"BYCOTTON","risco_sacado":1,"tipo_entrega":"triangular","rs_obs":null},{"fornecedor_id":"campiolli","nome":"CAMPIOLLI","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"cartonader","nome":"CARTONADER","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"company-man","nome":"COMPANY MAN","risco_sacado":1,"tipo_entrega":"triangular","rs_obs":null},{"fornecedor_id":"coordenati","nome":"COORDENATI","risco_sacado":0,"tipo_entrega":"triangular","rs_obs":null},{"fornecedor_id":"dallmac","nome":"DALLMAC","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"dopio","nome":"DOPIO","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"factum","nome":"FACTUM","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"grafica-pampulha","nome":"GRÁFICA PAMPULHA","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"haco","nome":"HACO","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"hietiquetas","nome":"HIETIQUETAS","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"imagine-grafica","nome":"IMAGINE GRÁFICA","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"indorff","nome":"INDORFF","risco_sacado":0,"tipo_entrega":"triangular","rs_obs":null},{"fornecedor_id":"jace","nome":"JACE","risco_sacado":1,"tipo_entrega":"triangular","rs_obs":null},{"fornecedor_id":"labios-de-mel","nome":"LÁBIOS DE MEL","risco_sacado":1,"tipo_entrega":"triangular","rs_obs":null},{"fornecedor_id":"mash","nome":"MASH","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"miriam-ferreira","nome":"Miriam Ferreira","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"novaplastic","nome":"NOVAPLASTIC","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"seeder","nome":"SEEDER","risco_sacado":1,"tipo_entrega":"triangular","rs_obs":null},{"fornecedor_id":"uni-embalagens","nome":"UNI EMBALAGENS","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"vanelise","nome":"VANELISE","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"vape","nome":"VAPE","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"vifran","nome":"ViFran","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"wills","nome":"WILLS","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null},{"fornecedor_id":"wellone","nome":"Wellone","risco_sacado":0,"tipo_entrega":"direta","rs_obs":null}];
@@ -7981,6 +8075,547 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+
+
+// ═══════════════════════════════════════════════════════
+//  CONSUMO POR FORNECEDOR — aba Produtos (01/09/2026)
+//  Barras empilhadas: um mês por coluna, um segmento por fornecedor.
+//  Fonte: FOLLOW_ORDERS (produtoId é chave dura, date = Previsão Atual),
+//  a mesma base do calendário e do dashboard — os números batem com o banco.
+//  Só quantidade: valor unitário só existe nas planilhas a partir de 2026 e
+//  uma barra em R$ com metade da série zerada mentiria sobre a tendência.
+// ═══════════════════════════════════════════════════════
+let pconsTipo = '__todos__';   // categoria em foco na visão geral
+let pconsAno  = 'todos';       // 'todos' | 'AAAA'
+let pconsSit  = 'todos';       // 'todos' | 'recebido' | 'aberto'
+let pconsCtx  = null;
+let pconsLinha = null;   // categoria (linha) aberta na lateral — filtra o panorama          // null = tela geral; string = tipo fixado pelo produto aberto
+
+// produtoId → tipo. Usa o catálogo efetivo (inclui edições locais do Iorran).
+function pconsMapaTipo() {
+  const m = {};
+  getEffectiveProducts().forEach(p => { m[p.id] = p.tipo; });
+  return m;
+}
+
+// Agrega FOLLOW_ORDERS em {meses, forns, total, porTipo} respeitando os filtros.
+// tipo = null/'__todos__' → todas as categorias.
+function pconsDados(tipo) {
+  const mapa = pconsMapaTipo();
+  const linhaDe = {};
+  if (pconsLinha) getEffectiveProducts().forEach(pr => { linhaDe[pr.id] = pr.linha || 'Outros'; });
+  const soUm = tipo && tipo !== '__todos__';
+  const porMesForn = {}, totForn = {}, porTipo = {}, meses = new Set();
+  let total = 0, semTipo = 0;
+
+  FOLLOW_ORDERS.forEach(o => {
+    const t = mapa[o.produtoId];
+    if (!t) { semTipo += (o.qtd || 0); return; }   // produto do Follow fora do catálogo
+    if (soUm && t !== tipo) return;
+    if (pconsLinha && !soUm && linhaDe[o.produtoId] !== pconsLinha) return;
+    if (pconsAno !== 'todos' && o.date.slice(0,4) !== pconsAno) return;
+    if (pconsSit === 'recebido' && o.status !== 'received') return;
+    if (pconsSit === 'aberto'   && o.status === 'received') return;
+    const ym = o.date.slice(0,7), q = o.qtd || 0;
+    meses.add(ym);
+    (porMesForn[o.supplier] = porMesForn[o.supplier] || {});
+    porMesForn[o.supplier][ym] = (porMesForn[o.supplier][ym] || 0) + q;
+    totForn[o.supplier] = (totForn[o.supplier] || 0) + q;
+    porTipo[t] = (porTipo[t] || 0) + q;
+    total += q;
+  });
+
+  const forns = Object.keys(totForn)
+    .sort((a,b) => totForn[b] - totForn[a])
+    .map(nome => ({
+      nome,
+      cor: (SUPPLIER_MAP[nome] && SUPPLIER_MAP[nome].color) || '#607D8B',
+      total: totForn[nome],
+      mes: porMesForn[nome]
+    }));
+
+  return { meses: [...meses].sort(), forns, total, porTipo, semTipo };
+}
+
+// Anos presentes na base — o filtro só oferece o que existe
+function pconsAnos() {
+  const s = new Set();
+  FOLLOW_ORDERS.forEach(o => s.add(o.date.slice(0,4)));
+  return [...s].sort();
+}
+
+function setPconsTipo(t) { pconsTipo = t; pconsRedesenha(); }
+function setPconsAno(a)  { pconsAno  = a; pconsRedesenha(); }
+function setPconsSit(s)  { pconsSit  = s; pconsRedesenha(); }
+
+function pconsRedesenha() {
+  const box = document.getElementById('pconsBox');
+  if (box) box.innerHTML = pconsHtml(pconsCtx);
+}
+
+// ── Mês a mês: um mês por vez, uma barra por fornecedor ──
+// A pilha de 14 cores em 27 colunas era ilegível (Iorran, 01/09/2026). Trocada por
+// barra horizontal ordenada — a forma que se lê sem legenda, porque o nome fica
+// grudado na barra. A série inteira não some: virou a régua de meses embaixo,
+// de uma cor só, que também é o seletor.
+let pconsMesSel = null;   // 'AAAA-MM' — null = último mês com dado até hoje
+
+// Mês que abre: o mês corrente se ele tiver dado; senão o último passado.
+// Abrir no futuro mostraria carteira e daria a impressão de volume que ainda não
+// aconteceu.
+function pconsMesPadrao(meses) {
+  if (!meses.length) return null;
+  const hoje = new Date().toISOString().slice(0,7);
+  const passados = meses.filter(m => m <= hoje);
+  return passados.length ? passados[passados.length - 1] : meses[0];
+}
+
+function setPconsMes(m) { pconsMesSel = m; pconsRedesenha(); }
+function pconsAndaMes(passo) {
+  const d = pconsDados(pconsCtx ? pconsCtx : pconsTipo);
+  if (!d.meses.length) return;
+  const atual = (pconsMesSel && d.meses.includes(pconsMesSel)) ? pconsMesSel : pconsMesPadrao(d.meses);
+  const i = d.meses.indexOf(atual) + passo;
+  if (i < 0 || i >= d.meses.length) return;
+  setPconsMes(d.meses[i]);
+}
+
+// Nome do mês por extenso — no título cabe, e "Setembro de 2026" não se confunde
+// com "set/26" da régua.
+function pconsMesExtenso(m) {
+  const p = m.split('-');
+  return MES_NOME[+p[1]-1] + ' de ' + p[0];
+}
+
+function pconsMesAMes(d) {
+  if (!d.meses.length) return '<div class="no-items" style="padding:22px">Sem pedido nenhum nesse recorte.</div>';
+  const hoje = new Date().toISOString().slice(0,7);
+  const mes = (pconsMesSel && d.meses.includes(pconsMesSel)) ? pconsMesSel : pconsMesPadrao(d.meses);
+  const iMes = d.meses.indexOf(mes);
+  const anterior = iMes > 0 ? d.meses[iMes-1] : null;
+
+  // Totais do mês e do mês anterior, por fornecedor
+  const linhas = d.forns.map(f => ({
+    nome: f.nome, cor: f.cor,
+    v: f.mes[mes] || 0,
+    va: anterior ? (f.mes[anterior] || 0) : null
+  })).filter(l => l.v > 0).sort((a,b) => b.v - a.v);
+
+  const totMes = linhas.reduce((s,l) => s + l.v, 0);
+  const totAnt = anterior ? d.forns.reduce((s,f) => s + (f.mes[anterior] || 0), 0) : null;
+  const maxMes = linhas.length ? linhas[0].v : 1;
+
+  // Cabeçalho: setas + mês + total, com a variação contra o mês anterior
+  let variacao = '';
+  if (totAnt != null && totAnt > 0) {
+    const dd = (totMes - totAnt) / totAnt * 100;
+    variacao = '<span class="pcons-var ' + (dd >= 0 ? 'up' : 'down') + '">' +
+      (dd >= 0 ? '▲' : '▼') + ' ' + Math.abs(dd).toFixed(0) + '% vs ' + mesLabel(anterior) + '</span>';
+  } else if (anterior) {
+    variacao = '<span class="pcons-var vazio">sem base no mês anterior</span>';
+  }
+
+  const cab = '<div class="pcons-navmes">' +
+    '<button class="pcons-seta" onclick="pconsAndaMes(-1)"' + (iMes === 0 ? ' disabled' : '') +
+      ' title="Mês anterior">‹</button>' +
+    '<div class="pcons-navtxt">' +
+      '<div class="pcons-navmesnome">' + pconsMesExtenso(mes) +
+        (mes > hoje ? ' <span class="pcons-tagfut">carteira em aberto</span>' : '') + '</div>' +
+      '<div class="pcons-navtot">' + fmtQtd(totMes) + ' un · ' + linhas.length +
+        ' fornecedor' + (linhas.length === 1 ? '' : 'es') + ' ' + variacao + '</div>' +
+    '</div>' +
+    '<button class="pcons-seta" onclick="pconsAndaMes(1)"' + (iMes === d.meses.length-1 ? ' disabled' : '') +
+      ' title="Próximo mês">›</button>' +
+  '</div>';
+
+  // Barras horizontais: nome fora da barra, valor e fatia à direita.
+  // A largura é relativa ao MAIOR do mês, não ao total — assim a diferença entre
+  // o primeiro e o segundo se enxerga, que é o que se quer ver aqui.
+  const corpo = linhas.length ? linhas.map(l => {
+    let delta = '';
+    if (l.va != null) {
+      if (l.va > 0 && l.v > 0) {
+        const dd = (l.v - l.va) / l.va * 100;
+        delta = '<span class="pcons-bdelta ' + (dd >= 0 ? 'up' : 'down') + '">' +
+          (dd >= 0 ? '▲' : '▼') + ' ' + Math.abs(dd).toFixed(0) + '%</span>';
+      } else if (l.va === 0) delta = '<span class="pcons-bdelta novo">novo no mês</span>';
+    }
+    return '<div class="pcons-brow" title="' + escAttr(l.nome) + ' — ' + fmtQtd(l.v) + ' un em ' +
+        escAttr(mesLabel(mes)) + (l.va != null ? ' · mês anterior: ' + fmtQtd(l.va) + ' un' : '') + '">' +
+      '<div class="pcons-bnome"><i style="background:' + l.cor + '"></i>' + escHtml(l.nome) + '</div>' +
+      '<div class="pcons-btrack"><div class="pcons-bfill" style="width:' +
+        (l.v/maxMes*100).toFixed(1) + '%;background:' + l.cor + '"></div></div>' +
+      '<div class="pcons-bval">' + fmtQtd(l.v) + ' un</div>' +
+      '<div class="pcons-bpct">' + (totMes ? (l.v/totMes*100).toFixed(1) : '0,0') + '%</div>' +
+      '<div class="pcons-bdeltacel">' + delta + '</div>' +
+    '</div>';
+  }).join('') : '<div class="no-items" style="padding:18px">Nenhum pedido com entrega neste mês.</div>';
+
+  // Régua de meses: total de cada mês numa cor só. Serve de contexto e de seletor.
+  const totMesTodos = {};
+  d.meses.forEach(m => { totMesTodos[m] = d.forns.reduce((s,f) => s + (f.mes[m] || 0), 0); });
+  const maxRegua = Math.max(...d.meses.map(m => totMesTodos[m])) || 1;
+  const passo = d.meses.length > 20 ? 3 : d.meses.length > 12 ? 2 : 1;
+  const regua = d.meses.map((m, i) => {
+    const alt = Math.max(3, totMesTodos[m] / maxRegua * 100);
+    const mostra = passo === 1 || (+m.slice(5,7) - 1) % passo === 0 || i === d.meses.length - 1;
+    return '<button class="pcons-rg' + (m === mes ? ' on' : '') + (m > hoje ? ' fut' : '') + '"' +
+      ' onclick="setPconsMes(\'' + m + '\')" title="' + escAttr(mesLabel(m)) + ' — ' +
+      fmtQtd(totMesTodos[m]) + ' un">' +
+      '<span class="pcons-rgslot"><span class="pcons-rgbar" style="height:' + alt.toFixed(1) + '%"></span></span>' +
+      '<span class="pcons-rglbl">' + (mostra ? mesLabel(m) : '') + '</span></button>';
+  }).join('');
+
+  return '<div class="pcons-graf">' + cab +
+    '<div class="pcons-bars">' + corpo + '</div>' +
+    '<div class="pcons-regua-wrap"><div class="pcons-regua-tit">Todos os meses do recorte — clique para abrir</div>' +
+    '<div class="pcons-regua">' + regua + '</div></div></div>';
+}
+
+// Setas do teclado andam entre os meses quando o gráfico está na tela
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  if (!document.getElementById('pconsBox')) return;
+  const a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+  if (document.querySelector('.abc-screen, .prz-screen, .ped-screen')) return;   // tela cheia aberta
+  pconsAndaMes(e.key === 'ArrowLeft' ? -1 : 1);
+});
+
+
+// ── Ranking de fornecedores dentro do recorte ──
+function pconsRanking(d) {
+  if (!d.forns.length) return '';
+  const max = d.forns[0].total || 1;
+  const linhas = d.forns.map(f =>
+    '<div class="pcons-rrow">' +
+      '<div class="pcons-rnome"><i style="background:' + f.cor + '"></i>' + escHtml(f.nome) + '</div>' +
+      '<div class="pcons-rtrack"><div class="pcons-rfill" style="width:' + (f.total/max*100).toFixed(1) + '%;background:' + f.cor + '"></div></div>' +
+      '<div class="pcons-rval">' + fmtQtd(f.total) + ' un</div>' +
+      '<div class="pcons-rpct">' + (f.total/d.total*100).toFixed(1) + '%</div>' +
+    '</div>').join('');
+  return '<div class="pcons-rank"><div class="section-title" style="margin-bottom:8px">Participação por fornecedor</div>' + linhas + '</div>';
+}
+
+// ── Ranking de categorias (só na visão geral) — clicar foca a categoria ──
+function pconsRankingTipos(d) {
+  const itens = Object.entries(d.porTipo).sort((a,b) => b[1] - a[1]).slice(0, 15);
+  if (itens.length < 2) return '';
+  const max = itens[0][1] || 1;
+  const linhas = itens.map(function (par) {
+    const t = par[0], v = par[1], cor = getTypeColor(t);
+    return '<div class="pcons-rrow pcons-catrow" onclick="setPconsTipo(\'' + escJs(t) + '\')" title="Ver só ' + escAttr(t) + '">' +
+      '<div class="pcons-rnome"><i style="background:' + cor + '"></i>' + escHtml(t) + '</div>' +
+      '<div class="pcons-rtrack"><div class="pcons-rfill" style="width:' + (v/max*100).toFixed(1) + '%;background:' + cor + '"></div></div>' +
+      '<div class="pcons-rval">' + fmtQtd(v) + ' un</div>' +
+      '<div class="pcons-rpct">' + (v/d.total*100).toFixed(1) + '%</div></div>';
+  }).join('');
+  return '<div class="pcons-rank"><div class="section-title" style="margin-bottom:8px">Categorias ' +
+    '<span style="font-weight:500;color:var(--text-light);text-transform:none;letter-spacing:0">— clique para ver só ela</span></div>' +
+    linhas + '</div>';
+}
+
+// ── Bloco inteiro (filtros + gráfico + rankings) ──
+// ctx = null → tela geral com seletor de categoria; ctx = tipo → categoria fixa.
+function pconsHtml(ctx) {
+  const geral = !ctx;
+  const tipo  = geral ? pconsTipo : ctx;
+  const d     = pconsDados(tipo);
+  const foco  = (tipo && tipo !== '__todos__') ? tipo : null;
+
+  const anos = ['todos'].concat(pconsAnos());
+  const chipsAno = anos.map(a =>
+    '<button class="pcons-chip' + (pconsAno === a ? ' on' : '') + '" onclick="setPconsAno(\'' + escJs(a) + '\')">' +
+    (a === 'todos' ? 'Todos' : a) + '</button>').join('');
+  const chipsSit = [['todos','Todos'],['aberto','A receber'],['recebido','Recebido']].map(function (par) {
+    return '<button class="pcons-chip' + (pconsSit === par[0] ? ' on' : '') +
+      '" onclick="setPconsSit(\'' + par[0] + '\')">' + par[1] + '</button>';
+  }).join('');
+
+  let seletor = '';
+  if (geral) {
+    // Agrupado por categoria (linha): 93 tipos numa lista chapada não se acha
+    const porLinha = {};
+    getEffectiveProducts().forEach(pr => {
+      const l = pr.linha || 'Outros';
+      (porLinha[l] = porLinha[l] || new Set()).add(pr.tipo);
+    });
+    const grupos = Object.keys(porLinha).sort((a,b) => a.localeCompare(b,'pt-BR')).map(l =>
+      '<optgroup label="' + escAttr(l) + '">' +
+      [...porLinha[l]].sort((a,b) => a.localeCompare(b,'pt-BR')).map(t =>
+        '<option value="' + escAttr(t) + '"' + (pconsTipo === t ? ' selected' : '') + '>' + escHtml(t) + '</option>').join('') +
+      '</optgroup>').join('');
+    seletor = '<div class="pcons-fgrupo"><span class="pcons-flabel">Categoria</span>' +
+      '<select class="pcons-sel" onchange="setPconsTipo(this.value)">' +
+      '<option value="__todos__"' + (pconsTipo === '__todos__' ? ' selected' : '') + '>Todas as categorias</option>' +
+      grupos + '</select></div>';
+  }
+
+  const lider = d.forns[0];
+  const nMeses = d.meses.length;
+  const media = nMeses ? d.total / nMeses : 0;
+  const kpis = '<div class="pcons-kpis">' +
+    '<div class="pcons-kpi"><div class="k">Volume</div><div class="v">' + fmtQtd(d.total) + '</div><div class="d">peças no recorte</div></div>' +
+    '<div class="pcons-kpi"><div class="k">Fornecedores</div><div class="v">' + d.forns.length + '</div><div class="d">com pedido</div></div>' +
+    '<div class="pcons-kpi"><div class="k">Média/mês</div><div class="v">' + fmtQtd(media) + '</div><div class="d">' + nMeses + ' mês(es)</div></div>' +
+    (lider ? '<div class="pcons-kpi"><div class="k">Maior fatia</div>' +
+      '<div class="v" style="color:' + lider.cor + '">' + (lider.total/d.total*100).toFixed(1) + '%</div>' +
+      '<div class="d">' + escHtml(lider.nome) + '</div></div>' : '') +
+    '</div>';
+
+  const titulo = foco ? foco : (pconsLinha || 'Todas as categorias');
+  const sub = 'Quantidade pedida por fornecedor, mês a mês. O mês é a <b>Previsão Atual de entrega</b> — ' +
+    'a mesma data do calendário. Meses à frente de hoje são carteira em aberto (barra mais clara).';
+
+  return '<div class="pcons">' +
+    '<div class="pcons-head"><div>' +
+      '<div class="pcons-tit">Consumo por fornecedor · ' + escHtml(titulo) + '</div>' +
+      '<div class="pcons-sub">' + sub + '</div></div>' +
+      '<div class="pcons-filtros">' + seletor +
+        '<div class="pcons-fgrupo"><span class="pcons-flabel">Ano</span>' + chipsAno + '</div>' +
+        '<div class="pcons-fgrupo"><span class="pcons-flabel">Situação</span>' + chipsSit + '</div>' +
+      '</div></div>' +
+    kpis +
+    pconsMesAMes(d) +
+    pconsRanking(d) +
+    ((geral && !foco) ? pconsRankingTipos(d) : '') +
+    (d.semTipo ? '<div class="pcons-nota">⚠️ ' + fmtQtd(d.semTipo) + ' un de pedidos do Follow ficaram de fora: ' +
+      'o produto não está no catálogo. Ver as pendências de de-para na aba Cadastrar.</div>' : '') +
+    '</div>';
+}
+
+// Volta do detalhe de um produto para o panorama de todas as categorias.
+// Sem isto o único caminho de volta era trocar de aba e voltar.
+function voltarProdutosGeral() {
+  currentProductId = null;
+  pconsTipo = '__todos__';
+  renderProductList();          // tira o destaque do item na lista
+  renderConsumoGeral();
+}
+
+// Tela geral da aba Produtos: sem produto selecionado, o painel mostra o consumo
+// de todo o catálogo em vez de um "Selecione um produto" vazio.
+function renderConsumoGeral() {
+  pconsCtx = null;
+  const el = document.getElementById('productDetail');
+  if (el) el.innerHTML = '<div id="pconsBox">' + pconsHtml(null) + '</div>';
+}
+
+
+// ═══════════════════════════════════════════════════════
+//  BARRA DE CIMA QUE SE RECOLHE (01/09/2026)
+//  A tela de módulos já é a navegação principal — a barra fixa repetia a mesma
+//  escolha e ocupava 56px em todas as telas. Agora ela fica recolhida e sobe
+//  quando o mouse chega no topo. Não é escondida de vez: o puxador continua
+//  visível, o Tab abre a barra pelo foco, e o clique no puxador fixa de volta.
+// ═══════════════════════════════════════════════════════
+function recolherNav() { setNavAuto(true); }
+function fixarNav()    { setNavAuto(false); }
+
+function setNavAuto(auto) {
+  document.body.classList.toggle('nav-auto', auto);
+  if (!auto) document.body.classList.remove('nav-aberta');
+  try { localStorage.setItem('mv_nav_auto', auto ? '1' : '0'); } catch (e) {}
+  // A barra some/aparece: o gráfico de meses mede a largura da tela, e a altura
+  // mudou junto. Sem remedir, os rótulos do eixo ficam com o espaçamento antigo.
+  setTimeout(function () { if (typeof ajustaGraficoMes === 'function') ajustaGraficoMes(); }, 220);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const zona = document.getElementById('navZona');
+  const barra = document.querySelector('nav');
+  if (!zona || !barra) return;
+
+  let fechar = null;
+  const abre = function () { clearTimeout(fechar); document.body.classList.add('nav-aberta'); };
+  // Um respiro antes de fechar: sem ele, atravessar a fronteira entre o puxador e
+  // a barra já contava como saída e a barra piscava.
+  const some = function () {
+    clearTimeout(fechar);
+    fechar = setTimeout(function () {
+      if (barra.contains(document.activeElement)) return;   // digitando na busca
+      document.body.classList.remove('nav-aberta');
+    }, 300);
+  };
+
+  [zona, barra, document.getElementById('navPuxador')].forEach(function (el) {
+    if (!el) return;
+    el.addEventListener('mouseenter', abre);
+    el.addEventListener('mouseleave', some);
+  });
+  barra.addEventListener('focusin', abre);
+  barra.addEventListener('focusout', some);
+
+  // Começa recolhida — foi o pedido. Quem fixar, fica fixa.
+  let auto = true;
+  try { const v = localStorage.getItem('mv_nav_auto'); if (v !== null) auto = (v === '1'); } catch (e) {}
+  setNavAuto(auto);
+});
+
+
+// ═══════════════════════════════════════════════════════
+//  LATERAL DE PRODUTOS EM DOIS NÍVEIS (01/09/2026)
+//  Antes: filtro produto/insumo + 30 chips de categoria + busca + "Novo produto"
+//  + lista com cabeçalho de linha e duas legendas por item ("3 cores · 1 forn.",
+//  "3 SKUs"). Muita palavra pequena competindo com o nome do produto.
+//  Agora: 1ª página só as categorias; escolher uma leva à 2ª, com os produtos
+//  daquela categoria — e é lá que aparecem a busca e o "Novo produto", porque só
+//  ali eles têm o que filtrar. Contagens viraram número puro, sem rótulo.
+// ═══════════════════════════════════════════════════════
+let prodNivel    = 1;      // 1 = categorias · 2 = produtos da categoria
+let prodCategoria = null;  // linha escolhida no nível 1
+let prodBusca    = '';
+
+// Catálogo agrupado por categoria (linha). Uma passada só serve os dois níveis.
+function prodPorCategoria() {
+  const mapa = {};
+  getEffectiveProducts().forEach(p => {
+    const l = p.linha || 'Outros';
+    if (!mapa[l]) mapa[l] = { nome: l, itens: [], tipos: {}, insumo: true };
+    mapa[l].itens.push(p);
+    (mapa[l].tipos[p.tipo] = mapa[l].tipos[p.tipo] || []).push(p);
+    if (p.categoria !== 'insumo') mapa[l].insumo = false;   // só é insumo se TODOS forem
+  });
+  return mapa;
+}
+
+function abrirCategoria(linha) {
+  prodNivel = 2; prodCategoria = linha; prodBusca = '';
+  pconsLinha = linha;            // o panorama acompanha a categoria aberta
+  currentProductId = null;
+  renderProdSidebar();
+  renderConsumoGeral();
+}
+
+function voltarCategorias() {
+  prodNivel = 1; prodCategoria = null; prodBusca = '';
+  pconsLinha = null; pconsTipo = '__todos__';
+  currentProductId = null;
+  renderProdSidebar();
+  renderConsumoGeral();
+}
+
+// Nome de exibição: tira a categoria repetida do começo do tipo.
+// "Camiseta Gola O 1.0" dentro de Camiseta vira "Gola O 1.0" — a palavra já está
+// no cabeçalho e repeti-la em 15 linhas seguidas era metade do ruído.
+function prodNomeCurto(tipo, linha) {
+  if (!linha) return tipo;
+  const pre = linha + ' ';
+  return tipo.startsWith(pre) && tipo.length > pre.length ? tipo.slice(pre.length) : tipo;
+}
+
+function renderProdSidebar() {
+  const alvo = document.getElementById('prodSidebar');
+  if (!alvo) return;
+  const mapa = prodPorCategoria();
+
+  if (prodNivel === 1 && prodBusca.trim()) {
+    const q = prodBusca.trim().toLowerCase();
+    const achados = [];
+    Object.values(mapa).forEach(c => Object.entries(c.tipos).forEach(([tipo, itens]) => {
+      if (tipo.toLowerCase().includes(q) || itens.some(x => x.cor.toLowerCase().includes(q)))
+        achados.push({ tipo, itens, cat: c.nome });
+    }));
+    achados.sort((a,b) => a.tipo.localeCompare(b.tipo,'pt-BR'));
+    const corpo = achados.length ? achados.map(a =>
+      '<button class="tipo-row" onclick="irParaTipo(\'' + escJs(a.tipo) + '\')"' +
+      ' title="' + escAttr(a.tipo + ' — ' + a.cat) + '">' +
+      '<span class="tipo-barra" style="background:' + getTypeColor(a.tipo) + '"></span>' +
+      '<span class="tipo-corpo"><span class="tipo-nome">' + escHtml(a.tipo) + '</span>' +
+      '<span class="tipo-cat">' + escHtml(a.cat) + '</span></span>' +
+      '<span class="tipo-num">' + a.itens.length + '</span></button>').join('')
+      : '<div class="prod-vazio">Nenhum produto com esse nome.</div>';
+    alvo.innerHTML =
+      '<div class="prod-side-topo">' +
+        '<button class="cat-voltar" onclick="filterProducts(\'\')" title="Limpar a busca">‹</button>' +
+        '<div><div class="prod-side-tit">Busca</div>' +
+        '<div class="prod-side-sub">' + achados.length + ' resultado(s)</div></div></div>' +
+      '<div class="prod-side-busca"><input type="text" id="productSearch" placeholder="Buscar produto…"' +
+        ' value="' + escAttr(prodBusca) + '" oninput="filterProducts(this.value)"></div>' +
+      '<div class="prod-side-lista">' + corpo + '</div>';
+    const campo = document.getElementById('productSearch');
+    if (campo) { campo.focus(); campo.setSelectionRange(prodBusca.length, prodBusca.length); }
+    return;
+  }
+
+  if (prodNivel === 1) {
+    const linhas = Object.values(mapa).sort((a,b) => b.itens.length - a.itens.length);
+    const corpo = linhas.map(c => {
+      const nTipos = Object.keys(c.tipos).length;
+      return '<button class="cat-row' + (c.insumo ? ' insumo' : '') + '"' +
+        ' onclick="abrirCategoria(\'' + escJs(c.nome) + '\')"' +
+        ' title="' + escAttr(c.nome + ' — ' + nTipos + ' produto(s), ' + c.itens.length + ' cores') + '">' +
+        '<span class="cat-marca" style="background:' + getTypeColor(Object.keys(c.tipos)[0]) + '"></span>' +
+        '<span class="cat-nome">' + escHtml(c.nome) + '</span>' +
+        '<span class="cat-num">' + c.itens.length + '</span>' +
+        '<span class="cat-seta">›</span></button>';
+    }).join('');
+    alvo.innerHTML =
+      '<div class="prod-side-topo"><div class="prod-side-tit">Categorias</div>' +
+        '<div class="prod-side-sub">' + linhas.length + ' · ' +
+        Object.values(mapa).reduce((s,c) => s + c.itens.length, 0) + ' SKUs</div></div>' +
+      '<div class="prod-side-lista">' + corpo + '</div>';
+    const badge = document.getElementById('navBadge');
+    if (badge && currentView === 'produtos') badge.innerHTML = '<strong>' + linhas.length + '</strong> categorias';
+    return;
+  }
+
+  // ── Nível 2 ──
+  const cat = mapa[prodCategoria];
+  if (!cat) { voltarCategorias(); return; }
+  const q = prodBusca.toLowerCase();
+  const tipos = Object.entries(cat.tipos)
+    .filter(([tipo, itens]) => !q || tipo.toLowerCase().includes(q) ||
+      itens.some(p => p.cor.toLowerCase().includes(q)))
+    .sort((a,b) => a[0].localeCompare(b[0],'pt-BR'));
+
+  const corpo = tipos.length ? tipos.map(([tipo, itens]) => {
+    const dots = itens.slice().sort((a,b) => a.cor.localeCompare(b.cor)).slice(0,10).map(p =>
+      '<i style="background:' + getColorHex(p.cor) + '"></i>').join('');
+    return '<button class="tipo-row' + (currentProductId === tipo ? ' active' : '') + '"' +
+      ' onclick="selectProductType(\'' + escJs(tipo) + '\')"' +
+      ' title="' + escAttr(tipo + ' — ' + itens.length + ' cores') + '">' +
+      '<span class="tipo-barra" style="background:' + getTypeColor(tipo) + '"></span>' +
+      '<span class="tipo-corpo"><span class="tipo-nome">' + escHtml(prodNomeCurto(tipo, cat.nome)) + '</span>' +
+      '<span class="tipo-dots">' + dots + (itens.length > 10 ? '<em>+' + (itens.length-10) + '</em>' : '') + '</span></span>' +
+      '<span class="tipo-num">' + itens.length + '</span></button>';
+  }).join('') : '<div class="prod-vazio">Nada com esse nome nesta categoria.</div>';
+
+  alvo.innerHTML =
+    '<div class="prod-side-topo">' +
+      '<button class="cat-voltar" onclick="voltarCategorias()" title="Voltar para as categorias">‹</button>' +
+      '<div><div class="prod-side-tit">' + escHtml(cat.nome) + '</div>' +
+      '<div class="prod-side-sub">' + Object.keys(cat.tipos).length + ' · ' + cat.itens.length + ' SKUs</div></div>' +
+    '</div>' +
+    '<div class="prod-side-busca">' +
+      '<input type="text" id="productSearch" placeholder="Buscar em ' + escAttr(cat.nome) + '…"' +
+        ' value="' + escAttr(prodBusca) + '" oninput="filterProducts(this.value)">' +
+      '<button class="prod-novo" onclick="renderNewProductForm()" title="Cadastrar um produto novo">+</button>' +
+    '</div>' +
+    '<div class="prod-side-lista">' + corpo + '</div>';
+
+  const campo = document.getElementById('productSearch');
+  if (campo && prodBusca) { campo.focus(); campo.setSelectionRange(prodBusca.length, prodBusca.length); }
+  const badge = document.getElementById('navBadge');
+  if (badge && currentView === 'produtos')
+    badge.innerHTML = '<strong>' + Object.keys(cat.tipos).length + '</strong> produtos · <strong>' + cat.itens.length + '</strong> SKUs';
+}
+
+function filterProducts(q) { prodBusca = q || ''; renderProdSidebar(); }
+
+// Nomes antigos continuam válidos: init, switchView, salvar produto e o "voltar"
+// do detalhe chamam estes.
+function renderProductList(q) { if (q !== undefined) prodBusca = q; renderProdSidebar(); }
+function buildTipoChips() { /* os chips viraram a 1ª página da lateral */ }
+
+// Abrir um produto pela busca do topo ou por link de outra tela precisa levar a
+// lateral junto para a categoria dele — senão o item fica marcado numa lista que
+// não está à vista.
+function irParaTipo(tipo) {
+  const p = getEffectiveProducts().find(x => x.tipo === tipo);
+  if (p) { prodNivel = 2; prodCategoria = p.linha || 'Outros'; pconsLinha = prodCategoria; }
+  selectProductType(tipo);
+}
 
 </script>
 </body>
