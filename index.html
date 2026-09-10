@@ -7856,12 +7856,30 @@ async function detectarModoLocal() {
     return MODO_LOCAL;
   } catch (e) { MODO_LOCAL = false; return false; }
 }
+function pintarSeloModoLocal() {
+  if (document.getElementById('navLocalSelo')) return;   // já pintado
+  const el = document.getElementById('navVersion');
+  if (el) el.insertAdjacentHTML('beforebegin',
+    '<div class="nav-local" id="navLocalSelo" title="O painel está rodando com o servidor local: atualiza a planilha e grava no banco sem depender do Cowork">● modo local</div>');
+}
+
+// O servidor local às vezes ainda está subindo quando a página abre — por
+// exemplo, o computador acabou de ligar e o atalho de startup não terminou.
+// Sem repetir a checagem, MODO_LOCAL ficava travado em false pelo resto da
+// vida da aba (era preciso um F5 pra corrigir, e nada avisava disso — foi o
+// que aconteceu com o Iorran em 10/09/2026). Tenta de novo a cada 5s por até
+// 2 minutos antes de desistir; depois disso, ou não há servidor mesmo (site
+// publicado) ou o problema é outro que vale investigar.
 document.addEventListener('DOMContentLoaded', () => {
-  detectarModoLocal().then(ok => {
-    const el = document.getElementById('navVersion');
-    if (ok && el) el.insertAdjacentHTML('beforebegin',
-      '<div class="nav-local" title="O painel está rodando com o servidor local: atualiza a planilha e grava no banco sem depender do Cowork">● modo local</div>');
-  });
+  let tentativas = 0;
+  const tenta = () => {
+    detectarModoLocal().then(ok => {
+      if (ok) { pintarSeloModoLocal(); return; }
+      tentativas++;
+      if (tentativas < 24) setTimeout(tenta, 5000);
+    });
+  };
+  tenta();
 });
 
 async function apiLocal(rota, opcoes) {
