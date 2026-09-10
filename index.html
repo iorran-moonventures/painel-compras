@@ -10212,7 +10212,7 @@ function abrirFichaForm(nome, falta, depois) {
       <div class="doc-modal-pe">
         <span class="doc-modal-aviso">${MODO_LOCAL ? '' :
           (typeof SOMENTE_LEITURA !== 'undefined' && SOMENTE_LEITURA)
-            ? 'Este é o Guia público (somente leitura) — não tem como salvar aqui. Para gerar o documento com o cadastro completo do fornecedor, abra o Guia local em http://localhost:5599.'
+            ? 'Isto é o Guia público — preencha e gere o documento normalmente. Só não fica salvo no cadastro oficial do fornecedor; para isso, use o Guia local em http://localhost:5599.'
             : 'Servidor local não respondeu ainda — dá para gerar o documento agora, mas o cadastro só salva quando ele estiver de pé.'}</span>
         <button class="doc-bt-sec" onclick="fecharFicha()">Cancelar</button>
         <button class="doc-bt" onclick="salvarFicha('${escJs(nome)}','${escJs(depois || '')}')">Salvar e gerar</button>
@@ -10228,11 +10228,10 @@ async function buscarCnpjFicha(nome) {
   const el = document.getElementById('fichaCnpjBusca');
   const bruto = (el.value || '').replace(/\D/g, '');
   if (bruto.length !== 14) { showToast('CNPJ precisa ter 14 dígitos.'); return; }
-  if (!MODO_LOCAL) { showToast('A busca na Receita precisa do servidor local ligado.'); return; }
   showToast('Consultando a Receita…');
   try {
-    const d = await apiLocal('/api/cnpj?n=' + bruto);
-    const dados = d.dados || d;
+    const dados = MODO_LOCAL ? (await apiLocal('/api/cnpj?n=' + bruto)).dados
+                              : await buscarCnpjDireto(bruto);
     ['razao_social','nome_fantasia','cnpj','email','telefone','cep','logradouro','numero',
      'complemento','bairro','municipio','uf'].forEach(k => {
       const c = document.getElementById('fc_' + k);
@@ -10240,6 +10239,30 @@ async function buscarCnpjFicha(nome) {
     });
     showToast('Dados da Receita preenchidos. Confira e salve.');
   } catch (e) { showToast('Não deu para consultar: ' + e.message); }
+}
+
+// Sem servidor local (site publicado), a busca de CNPJ vai direto do
+// navegador na BrasilAPI — ela aceita chamada de qualquer origem
+// (access-control-allow-origin: *, conferido em 10/09/2026). No modo local
+// continua passando pelo servidor (rota /api/cnpj, com 3 tentativas e sem
+// expor a página a requisição externa nenhuma). Mesmo mapeamento de campos
+// dos dois lados, de propósito — são 15 linhas, não vale a pena compartilhar
+// módulo entre navegador e Node só por isto.
+async function buscarCnpjDireto(cnpj) {
+  const r = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + cnpj);
+  if (r.status === 404) throw new Error('CNPJ não encontrado na base da Receita.');
+  if (r.status === 429) throw new Error('limite de consultas da Receita atingido — tente de novo em instantes.');
+  if (!r.ok) throw new Error('a Receita respondeu ' + r.status);
+  const d = await r.json();
+  const tel = [d.ddd_telefone_1, d.ddd_telefone_2].filter(Boolean)[0] || '';
+  return {
+    cnpj, razao_social: d.razao_social || '', nome_fantasia: d.nome_fantasia || '',
+    email: (d.email || '').toLowerCase(),
+    telefone: tel ? tel.replace(/^(\d{2})(\d+)$/, '($1) $2') : '',
+    cep: (d.cep || '').replace(/^(\d{5})(\d{3})$/, '$1-$2'),
+    logradouro: d.logradouro || '', numero: d.numero || '', complemento: d.complemento || '',
+    bairro: d.bairro || '', municipio: d.municipio || '', uf: d.uf || ''
+  };
 }
 
 async function salvarFicha(nome, depois) {
