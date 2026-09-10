@@ -10493,9 +10493,15 @@ function flwClasse(o) {
   if (d < 0) return { k: 'antecipado', rot: 'Antecipado ' + Math.abs(d) + 'd', cor: 'verde' };
   return { k: 'emdia', rot: 'Em dia', cor: 'neutro' };
 }
-// Prévia: passou da data que foi prometida no pedido e ainda não chegou.
+// Prévia: o objetivo é enxergar o atraso ANTES dele acontecer. Por isso conta
+// como prévia assim que o fornecedor reprograma para depois do combinado —
+// não espera a data prometida chegar para avisar. Continua valendo também o
+// caso antigo (a data prometida já passou), que cobre o pedido que nunca foi
+// reprogramado mas também nunca foi recebido.
 function flwPrevia(o, hoje) {
-  return o.status !== 'received' && o.dateIni && o.dateIni < hoje;
+  if (o.status === 'received') return false;
+  if (flwClasse(o).k === 'adiado') return true;
+  return !!(o.dateIni && o.dateIni < hoje);
 }
 function flwVencido(o, hoje) { return o.status !== 'received' && o.date && o.date < hoje; }
 
@@ -10521,10 +10527,15 @@ function flwFiltra(rows) {
 function flwCartao(o, hoje) {
   const c = flwClasse(o), d = flwDiff(o);
   const vencido = flwVencido(o, hoje), previa = flwPrevia(o, hoje);
+  // A previsão inicial pode ainda estar no futuro mesmo quando já é prévia de
+  // atraso (foi reprogramado antes de vencer) — nesse caso "Xd da data inicial"
+  // daria um número negativo sem sentido. O selo "Adiado Nd" da classe já avisa;
+  // aqui só soma informação quando a data original já passou de verdade.
+  const dataIniJaPassou = !!(o.dateIni && o.dateIni < hoje);
   const dias = vencido ? Math.round((new Date(hoje) - new Date(o.date)) / 86400000)
-             : previa ? Math.round((new Date(hoje) - new Date(o.dateIni)) / 86400000) : 0;
+             : dataIniJaPassou ? Math.round((new Date(hoje) - new Date(o.dateIni)) / 86400000) : 0;
   const alerta = vencido ? '<span class="flw-selo vermelho forte">Vencido ' + dias + 'd</span>'
-               : previa ? '<span class="flw-selo ambar">' + dias + 'd da data inicial</span>' : '';
+               : dataIniJaPassou ? '<span class="flw-selo ambar">' + dias + 'd da data inicial</span>' : '';
   const regua = d == null ? '<span class="flw-reg cinza">sem previsão inicial</span>'
     : '<span class="flw-reg ' + c.cor + '"><b>' + dataBR(o.dateIni) + '</b>' +
       (d === 0 ? ' <i>=</i> ' : ' <i>→</i> ') + '<b>' + dataBR(o.date) + '</b></span>';
@@ -10543,11 +10554,11 @@ function flwCartao(o, hoje) {
 // cada quadro o mês (ou a semana) continua marcando a divisória.
 const QUADROS = [
   { k: 'previa', rot: 'Prévia de atraso', cor: 'ambar',
-    dica: 'Passou da data prometida no pedido — ou já venceu a previsão renegociada.' },
+    dica: 'Foi reprogramado para depois do combinado, mesmo que a nova data ainda não tenha chegado — ou já venceu de vez.' },
   { k: 'antecipado', rot: 'Antecipado', cor: 'verde',
     dica: 'Fornecedor puxou a entrega para antes do combinado.' },
   { k: 'emdia', rot: 'Em dia', cor: 'neutro',
-    dica: 'Dentro do prazo. Os adiados que ainda não venceram aparecem aqui com o selo do adiamento.' }
+    dica: 'Nunca foi reprogramado e ainda não venceu.' }
 ];
 function flwQuadroDe(o, hoje) {
   if (flwPrevia(o, hoje) || flwVencido(o, hoje)) return 'previa';
@@ -10618,7 +10629,7 @@ function renderPedidosFollow(nome) {
   return `
     <div class="ped-kpis">
       ${kpi('A receber', new Set(aReceber.map(o => o.pedido)).size, '', fmtQtd(aReceber.reduce((s,o)=>s+(o.qtd||0),0)) + ' un')}
-      ${kpi('Prévia de atraso', nPrevia, nPrevia ? 'pend' : '', 'passou da previsão inicial')}
+      ${kpi('Prévia de atraso', nPrevia, nPrevia ? 'pend' : '', 'reprogramado pra depois do combinado')}
       ${kpi('Vencidos', nVenc, nVenc ? 'pend' : '', 'passou da previsão atual')}
       ${kpi('Reprogramados', nAdiado + nAntec, '', nAdiado + ' adiados · ' + nAntec + ' antecipados')}
       ${kpi('Data mantida', nDia, 'ok', 'previsão nunca mudou')}
@@ -10640,9 +10651,11 @@ function renderPedidosFollow(nome) {
     <div id="flwCorpo">${flwCorpo(rows)}</div>
     <div class="prz-nota" style="margin-top:14px">Esta tela lista <b>apenas o que está a receber</b> —
       o que já chegou fica na aba <b>Pedidos</b> e no calendário. A régua <b>previsão inicial → previsão atual</b> sai da
-      aba Solicitação da COLETA. <b>Prévia de atraso</b> = já passou da data prometida no pedido e não
-      foi recebido. <b>Vencido</b> = passou também da previsão renegociada. Não existe data de entrega
-      real na base — o que se mede aqui é o compromisso e como ele foi reprogramado.</div>`;
+      aba Solicitação da COLETA. <b>Prévia de atraso</b> = o fornecedor já reprogramou para depois do
+      combinado — conta a partir do momento da reprogramação, sem esperar a nova data chegar — ou a
+      data prometida no pedido já passou sem receber. <b>Vencido</b> = passou também da previsão
+      renegociada. Não existe data de entrega real na base — o que se mede aqui é o compromisso e
+      como ele foi reprogramado.</div>`;
 }
 
 // ── Conferência Follow × Coleta ──
