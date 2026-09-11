@@ -2414,34 +2414,69 @@ function getSupplierDetails() {
   try { return JSON.parse(localStorage.getItem('mv_supplier_details') || '{}'); } catch { return {}; }
 }
 function saveSupplierDetails(d) { localStorage.setItem('mv_supplier_details', JSON.stringify(d)); }
+// Ficha do fornecedor — lida do banco (FICHAS), a mesma fonte do modal de
+// documentos. Unificado em 11/09/2026: antes esta tela lia só do
+// localStorage do navegador e o modal de documentos só do banco — dois
+// cadastros do mesmo fornecedor que nunca se falavam. "Contato" aqui é
+// TELEFONE (mapeia para `telefone` no banco); o nome do representante legal
+// que o modal de documentos pede é um campo à parte (`contato` no banco).
 function getSupplierInfo(name) {
-  const all = getSupplierDetails();
-  const base = { nome: name, razaoSocial: '', cnpj: '', contato: '', email: '', tipoFornecedor: '', ativo: true };
-  return { ...base, ...(all[name] || {}) };
+  const f = fichaDe(name);
+  return {
+    nome: f.nome || name, razaoSocial: f.razao_social || '', cnpj: f.cnpj || '',
+    contato: f.telefone || '', email: f.email || '', tipoFornecedor: f.tipo || '',
+    ativo: f.ativo !== 0,
+    nomeFantasia: f.nome_fantasia || '', cep: f.cep || '', logradouro: f.logradouro || '',
+    numero: f.numero || '', complemento: f.complemento || '', bairro: f.bairro || '',
+    municipio: f.municipio || '', uf: f.uf || '',
+    situacaoCadastral: f.situacao_cadastral || '', dataAbertura: f.data_abertura || '',
+    porte: f.porte || '', cnaeDesc: f.cnae_desc || '',
+    naturezaJuridica: f.natureza_juridica || '', regimeTributario: f.regime_tributario || ''
+  };
 }
 
-// ── Migração: preenche automaticamente tipoFornecedor e ativo para fornecedores
-// que ainda não têm esses campos salvos explicitamente. Roda 1x por carregamento
-// e só toca em fornecedores nunca editados manualmente (não sobrescreve escolha do usuário).
-function migrateSupplierDefaults() {
+// ── Migração única: cadastro que só existia no navegador (tela "Cadastros e
+// Documentos", de antes da unificação com a ficha do banco em 11/09/2026)
+// sobe para o banco assim que o servidor local responde pela 1ª vez. Só
+// manda o que a ficha do banco ainda NÃO tem — dado já gravado por lá
+// (inclusive pelo modal de documentos) não é sobrescrito por uma cópia
+// antiga do navegador. Roda uma vez só (marcador em localStorage); depois
+// disso o cadastro vive só no banco, ver getSupplierInfo/saveCadastro.
+async function migrarCadastroLocalParaBanco() {
+  if (localStorage.getItem('mv_cadastro_migrado') === '1') return;
   const all = getSupplierDetails();
-  const products = getEffectiveProducts();
-  let changed = false;
-  allSuppliers().forEach(s => {
-    const raw = all[s.name] || {};
-    let touched = false;
-    if (raw.tipoFornecedor === undefined) {
-      raw.tipoFornecedor = (s.cat === 'insumo') ? 'insumos' : '';
-      touched = true;
-    }
-    if (raw.ativo === undefined) {
-      const linkedCount = products.filter(p => p.fornecedores[s.name]).length;
-      raw.ativo = linkedCount > 0;
-      touched = true;
-    }
-    if (touched) { all[s.name] = raw; changed = true; }
-  });
-  if (changed) saveSupplierDetails(all);
+  const nomes = Object.keys(all);
+  if (!nomes.length) { localStorage.setItem('mv_cadastro_migrado', '1'); return; }
+  const mapa = { razaoSocial:'razao_social', cnpj:'cnpj', contato:'telefone', email:'email',
+    nomeFantasia:'nome_fantasia', cep:'cep', logradouro:'logradouro', numero:'numero',
+    complemento:'complemento', bairro:'bairro', municipio:'municipio', uf:'uf',
+    situacaoCadastral:'situacao_cadastral', dataAbertura:'data_abertura', porte:'porte',
+    cnaeDesc:'cnae_desc', naturezaJuridica:'natureza_juridica', regimeTributario:'regime_tributario' };
+  let enviados = 0;
+  for (const nome of nomes) {
+    const d = all[nome] || {};
+    const f = fichaDe(nome);
+    const fid = f.fornecedor_id || rsSlug(nome);
+    const payload = { fornecedor_id: fid, nome, categoria: (SUPPLIER_MAP[nome] && SUPPLIER_MAP[nome].cat) || 'produto' };
+    let temAlgo = false;
+    Object.keys(mapa).forEach(k => {
+      const campo = mapa[k];
+      if (d[k] && !f[campo]) { payload[campo] = d[k]; temAlgo = true; }
+    });
+    if (d.tipoFornecedor && !f.tipo) { payload.tipo = d.tipoFornecedor; temAlgo = true; }
+    if (d.ativo === false && f.ativo !== 0) { payload.ativo = false; temAlgo = true; }
+    if (!temAlgo) continue;
+    try {
+      await apiLocal('/api/fornecedor-ficha', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload) });
+      enviados++;
+    } catch (e) { /* tenta os próximos; este fica pra próxima carga */ }
+  }
+  localStorage.setItem('mv_cadastro_migrado', '1');
+  if (enviados) {
+    showToast('Cadastro do navegador migrado para o banco: ' + enviados + ' fornecedor(es). Recarregue para ver.');
+    apiLocal('/api/regerar', { method: 'POST' }).catch(() => {});
+  }
 }
 
 // ── Cadastro: vínculos manuais produto↔fornecedor (localStorage) ──
@@ -2530,7 +2565,6 @@ function onNavSearch(q) {
 //  FORNECEDORES VIEW
 // ═══════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-  migrateSupplierDefaults();
   renderSupplierList();
   renderProductList();
   buildTipoChips();
@@ -2684,21 +2718,20 @@ function renderCadastroList(q='') {
   const list = document.getElementById('cadList');
   if (!list) return;
   const products = getEffectiveProducts();
-  const details = getSupplierDetails();
   let items = allSuppliers().filter(s => {
     if (currentCadFilter !== 'todos' && s.cat !== currentCadFilter) return false;
     if (q && !s.name.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
   items.sort((a, b) => {
-    const infoA = details[a.name] || {}, infoB = details[b.name] || {};
+    const infoA = getSupplierInfo(a.name), infoB = getSupplierInfo(b.name);
     const ativoA = infoA.ativo !== false, ativoB = infoB.ativo !== false;
     const nameA = (infoA.nome || a.name).toLowerCase(), nameB = (infoB.nome || b.name).toLowerCase();
     if (currentCadSort === 'status' && ativoA !== ativoB) return ativoA ? -1 : 1;
     return nameA.localeCompare(nameB);
   });
   list.innerHTML = items.map(s => {
-    const info = details[s.name] || {};
+    const info = getSupplierInfo(s.name);
     const ativo = info.ativo !== false;
     const linked = products.filter(p => p.fornecedores[s.name]).length;
     const active = currentCadSupplier === s.name ? ' active' : '';
@@ -2770,18 +2803,28 @@ function saveNewSupplier() {
   const sup = { name: nome, color, cat };
   const arr = getCustomSuppliers(); arr.push(sup); saveCustomSuppliers(arr);
   SUPPLIER_MAP[nome] = sup;
-  const det = getSupplierDetails();
-  det[nome] = {
-    nome,
-    razaoSocial: document.getElementById('nfRazao').value.trim(),
+
+  const fid = rsSlug(nome);
+  const dados = {
+    fornecedor_id: fid, nome, categoria: cat, tipo: tipoFornecedor,
+    razao_social: document.getElementById('nfRazao').value.trim(),
     cnpj: document.getElementById('nfCnpj').value.trim(),
-    contato: document.getElementById('nfContato').value.trim(),
+    telefone: document.getElementById('nfContato').value.trim(),
     email: document.getElementById('nfEmail').value.trim(),
-    tipoFornecedor,
-    ativo: true,
+    ativo: true
   };
-  saveSupplierDetails(det);
-  showToast('Fornecedor cadastrado!');
+  // guarda em memória — ficha aparece na tela mesmo sem servidor; a linha do
+  // fornecedor no banco (produtos, pedidos) só existe de verdade depois de
+  // uma importação de planilha ou de ligar o servidor para gravar a ficha
+  if (typeof FICHAS !== 'undefined') {
+    const { fornecedor_id, categoria, ...campos } = dados;
+    FICHAS[nome] = Object.assign({ fornecedor_id }, campos);
+  }
+  if (MODO_LOCAL) {
+    apiLocal('/api/fornecedor-ficha', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados) }).catch(e => showToast('Fornecedor criado na tela, mas não gravou no banco: ' + e.message));
+  }
+  showToast('Fornecedor cadastrado!' + (MODO_LOCAL ? '' : ' Ligue o servidor local para gravar de vez.'));
   renderSupplierList();
   selectCadSupplier(nome);
 }
@@ -2947,47 +2990,46 @@ function openWhatsApp() {
   window.open('https://wa.me/' + num, '_blank');
 }
 
+// Grava no banco (FICHAS) — mesma ficha lida pelo modal de documentos.
+// Atualiza a tela na hora mesmo sem servidor (como o resto do Guia), mas só
+// persiste de fato com o servidor local ligado.
 function saveCadastro() {
   if (!currentCadSupplier) return;
-  const s = SUPPLIER_MAP[currentCadSupplier];
-  const all = getSupplierDetails();
+  const nome = currentCadSupplier;
+  const f = fichaDe(nome);
+  const fid = f.fornecedor_id || rsSlug(nome);
   const tipoEl = document.getElementById('cadTipo');
-  const tipoFornecedor = tipoEl ? tipoEl.value : (all[currentCadSupplier]?.tipoFornecedor || '');
+  const tipo = tipoEl ? tipoEl.value : (f.tipo || '');
+  const ativo = document.getElementById('cadDetail')._ativo !== false;
   const v = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
-  all[currentCadSupplier] = {
-    nome: document.getElementById('cadNome').value.trim() || currentCadSupplier,
-    razaoSocial: v('cadRazao'),
-    cnpj: v('cadCnpj'),
-    contato: v('cadContato'),
-    email: v('cadEmail'),
-    tipoFornecedor,
-    ativo: document.getElementById('cadDetail')._ativo !== false,
-    // ficha vinda da consulta ao CNPJ
-    nomeFantasia: v('cadFantasia'), cep: v('cadCep'), logradouro: v('cadLogradouro'),
+  const dados = {
+    fornecedor_id: fid,
+    nome: document.getElementById('cadNome').value.trim() || nome,
+    categoria: (SUPPLIER_MAP[nome] && SUPPLIER_MAP[nome].cat) || 'produto',
+    razao_social: v('cadRazao'), cnpj: v('cadCnpj'), telefone: v('cadContato'), email: v('cadEmail'),
+    tipo, ativo,
+    nome_fantasia: v('cadFantasia'), cep: v('cadCep'), logradouro: v('cadLogradouro'),
     numero: v('cadNumero'), complemento: v('cadComplemento'), bairro: v('cadBairro'),
     municipio: v('cadMunicipio'), uf: v('cadUf').toUpperCase(),
-    situacaoCadastral: v('cadSitCad'), dataAbertura: v('cadAbertura'), porte: v('cadPorte'),
-    cnaeDesc: v('cadCnae'), naturezaJuridica: v('cadNatureza'), regimeTributario: v('cadRegime'),
+    situacao_cadastral: v('cadSitCad'), data_abertura: v('cadAbertura'), porte: v('cadPorte'),
+    cnae_desc: v('cadCnae'), natureza_juridica: v('cadNatureza'), regime_tributario: v('cadRegime')
   };
-  saveSupplierDetails(all);
-
-  // Espelha no banco quando o servidor está no ar, para a ficha não viver só no
-  // navegador desta máquina.
-  if (MODO_LOCAL) {
-    const d = all[currentCadSupplier];
-    apiLocal('/api/fornecedor-ficha', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ fornecedor_id: rsSlug(currentCadSupplier),
-        razao_social:d.razaoSocial, nome_fantasia:d.nomeFantasia, cnpj:d.cnpj,
-        email:d.email, telefone:d.contato, cep:d.cep, logradouro:d.logradouro,
-        numero:d.numero, complemento:d.complemento, bairro:d.bairro,
-        municipio:d.municipio, uf:d.uf, situacao_cadastral:d.situacaoCadastral,
-        data_abertura:d.dataAbertura, porte:d.porte, cnae_desc:d.cnaeDesc,
-        natureza_juridica:d.naturezaJuridica, regime_tributario:d.regimeTributario,
-        marcarConsulta: true }) }).catch(() => {});
+  // guarda em memória para a tela (e o resto do Guia, ex.: minuta) responder
+  // na hora, mesmo sem servidor
+  if (typeof FICHAS !== 'undefined') {
+    const { fornecedor_id, categoria, ...campos } = dados;
+    FICHAS[nome] = Object.assign({}, f, { fornecedor_id }, campos);
   }
-  showToast('Cadastro salvo!');
+  if (MODO_LOCAL) {
+    apiLocal('/api/fornecedor-ficha', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, dados, { marcarConsulta: true })) })
+      .then(() => showToast('Cadastro salvo no banco.'))
+      .catch(e => showToast('Ficou salvo na tela, mas não gravou no banco: ' + e.message));
+  } else {
+    showToast('Cadastro atualizado na tela — ligue o servidor local para gravar de vez.');
+  }
   renderCadastroList(document.getElementById('cadSearch').value);
-  renderCadastroDetail(currentCadSupplier);
+  renderCadastroDetail(nome);
 }
 
 let currentLinkSort = 'vinculado';
@@ -3055,9 +3097,8 @@ function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').re
 function renderSupplierList(q='', filter=currentFilter) {
   const list = document.getElementById('supplierList');
   const products = getEffectiveProducts();
-  const _det = getSupplierDetails();
   let items = allSuppliers().filter(s => {
-    if ((_det[s.name]||{}).ativo === false) return false;
+    if (getSupplierInfo(s.name).ativo === false) return false;
     if (filter !== 'todos' && s.cat !== filter) return false;
     if (q && !s.name.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
@@ -4790,8 +4831,7 @@ function nFornecedoresAtivos() {
   // mesmo filtro da lista lateral: prometer um número e entregar outro no
   // clique seria pior que não mostrar número nenhum
   try {
-    const det = getSupplierDetails();
-    return allSuppliers().filter(s => (det[s.name] || {}).ativo !== false).length;
+    return allSuppliers().filter(s => getSupplierInfo(s.name).ativo !== false).length;
   } catch (e) { return 0; }
 }
 
@@ -7414,12 +7454,16 @@ function slugForn(nome) {
 }
 function tarefaDoFornecedor(nome) { return 'atualizar-fornecedor-' + slugForn(nome); }
 
-function getColetaPath(nome) { return (getSupplierInfo(nome).planilhaColeta || '').trim(); }
+function getColetaPath(nome) { return (fichaDe(nome).planilha_coleta || '').trim(); }
 function setColetaPath(nome, valor) {
-  const all = getSupplierDetails();
-  all[nome] = all[nome] || {};
-  all[nome].planilhaColeta = (valor||'').trim();
-  saveSupplierDetails(all);
+  const v = (valor || '').trim();
+  const f = fichaDe(nome);
+  if (typeof FICHAS !== 'undefined') FICHAS[nome] = Object.assign({}, f, { planilha_coleta: v });
+  if (!MODO_LOCAL) return;
+  const fid = f.fornecedor_id || rsSlug(nome);
+  apiLocal('/api/fornecedor-ficha', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fornecedor_id: fid, nome, categoria: (SUPPLIER_MAP[nome] && SUPPLIER_MAP[nome].cat) || 'produto',
+      planilha_coleta: v }) }).catch(() => {});
 }
 // aceita link completo ou só o ID
 function extrairIdPlanilha(txt) {
@@ -7574,7 +7618,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let tentativas = 0;
   const tenta = () => {
     detectarModoLocal().then(ok => {
-      if (ok) { pintarSeloModoLocal(); return; }
+      if (ok) { pintarSeloModoLocal(); migrarCadastroLocalParaBanco(); return; }
       if (somenteLeitura) return;   // nunca vai virar true aqui — não insiste
       tentativas++;
       if (tentativas < 24) setTimeout(tenta, 5000);
