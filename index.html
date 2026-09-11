@@ -7614,6 +7614,16 @@ async function detectarModoLocal() {
     return MODO_LOCAL;
   } catch (e) { MODO_LOCAL = false; return false; }
 }
+// A 1ª checagem é compartilhada entre o selo "modo local" e o portão de login —
+// os dois só precisam saber o resultado real, não fazer a chamada duas vezes
+// nem adivinhar quanto tempo ela demora (era isso que causava o menu aparecer
+// e, pouco depois, o login cair por cima: um setTimeout de prazo fixo decidia
+// antes da resposta chegar, ou depois — nunca no momento certo).
+let _primeiraDeteccaoModoLocal = null;
+function detectarModoLocalUmaVez() {
+  if (!_primeiraDeteccaoModoLocal) _primeiraDeteccaoModoLocal = detectarModoLocal();
+  return _primeiraDeteccaoModoLocal;
+}
 function pintarSeloModoLocal() {
   if (document.getElementById('navLocalSelo')) return;   // já pintado
   const el = document.getElementById('navVersion');
@@ -7634,15 +7644,15 @@ function pintarSeloModoLocal() {
 document.addEventListener('DOMContentLoaded', () => {
   const somenteLeitura = typeof SOMENTE_LEITURA !== 'undefined' && SOMENTE_LEITURA;
   let tentativas = 0;
-  const tenta = () => {
-    detectarModoLocal().then(ok => {
+  const tenta = (primeira) => {
+    (primeira ? detectarModoLocalUmaVez() : detectarModoLocal()).then(ok => {
       if (ok) { pintarSeloModoLocal(); migrarCadastroLocalParaBanco(); return; }
       if (somenteLeitura) return;   // nunca vai virar true aqui — não insiste
       tentativas++;
-      if (tentativas < 24) setTimeout(tenta, 5000);
+      if (tentativas < 24) setTimeout(() => tenta(false), 5000);
     });
   };
-  tenta();
+  tenta(true);
 });
 
 async function apiLocal(rota, opcoes) {
@@ -11105,7 +11115,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // está no fonte da página) e ainda quebraria para quem abre o link, porque a
   // origem do GitHub Pages não está autorizada no Client ID. Se o portão tiver
   // de valer lá fora, o caminho é fechar o repositório — não a tela.
-  setTimeout(() => { if (!SESSAO && MODO_LOCAL) mostrarLogin(); }, 700);
+  //
+  // A decisão espera o resultado REAL da checagem (detectarModoLocalUmaVez),
+  // não um prazo fixo chutado. Antes era `setTimeout(...,700)`: se o servidor
+  // respondia depois disso (ele mesmo ainda subindo, ou a rede mais lenta), o
+  // menu abria liberado e o login caía por cima alguns instantes depois —
+  // pior ainda quando a resposta vinha bem DEPOIS de 700ms mas antes do
+  // usuário notar, porque aí o susto era garantido. Corrigido em 11/09/2026.
+  detectarModoLocalUmaVez().then(ok => { if (!SESSAO && ok) mostrarLogin(); });
 });
 
 
