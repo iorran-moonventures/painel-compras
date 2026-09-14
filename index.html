@@ -10904,8 +10904,8 @@ function telaLogin(erro) {
           <form class="lg-form" onsubmit="event.preventDefault();cadastrarComSenha();">
             <label class="lg-campo"><span>Nome</span>
               <input type="text" id="lgNome" autocomplete="name" placeholder="seu nome"></label>
-            <label class="lg-campo"><span>Usuário</span>
-              <input type="text" id="lgNovoUsuario" autocomplete="username" placeholder="escolha um usuário"
+            <label class="lg-campo"><span>E-mail da empresa</span>
+              <input type="email" id="lgNovoEmail" autocomplete="email" placeholder="seu.nome@moonventures.com.br"
                      autocapitalize="none" spellcheck="false"></label>
             <label class="lg-campo"><span>Senha</span>
               <input type="password" id="lgNovaSenha" autocomplete="new-password" placeholder="ao menos 6 caracteres"></label>
@@ -10913,7 +10913,8 @@ function telaLogin(erro) {
               <input type="password" id="lgConfirmaSenha" autocomplete="new-password" placeholder="repita a senha"></label>
             <button type="submit" class="lg-entrar" id="lgEntrar">Criar conta</button>
           </form>
-          <div class="lg-nota">Já tem conta? <button type="button" class="lg-link" onclick="alternarCadastroLogin(false)">Entrar</button></div>
+          <div class="lg-nota">Cadastro liberado só para ${d}.
+            Já tem conta? <button type="button" class="lg-link" onclick="alternarCadastroLogin(false)">Entrar</button></div>
         ` : `
           <form class="lg-form" onsubmit="event.preventDefault();entrarComSenha();">
             <label class="lg-campo"><span>Usuário</span>
@@ -10975,12 +10976,18 @@ async function entrarComSenha() {
 // de acabar de se cadastrar é atrito à toa.
 async function cadastrarComSenha() {
   const nome = (document.getElementById('lgNome') || {}).value || '';
-  const usuario = (document.getElementById('lgNovoUsuario') || {}).value || '';
+  const email = ((document.getElementById('lgNovoEmail') || {}).value || '').toLowerCase().trim();
   const senha = (document.getElementById('lgNovaSenha') || {}).value || '';
   const confirma = (document.getElementById('lgConfirmaSenha') || {}).value || '';
   const erro = document.getElementById('lgErro');
   const diz = t => { if (erro) { erro.textContent = t; erro.hidden = !t; } };
-  if (!nome.trim() || !usuario.trim() || !senha) return diz('Preencha nome, usuário e senha.');
+  if (!nome.trim() || !email || !senha) return diz('Preencha nome, e-mail e senha.');
+  // Confirmação só de UX — quem decide de verdade é o servidor, na mesma
+  // lista DOMINIOS_OK (checagem só no navegador seria enfeite: a página é
+  // editável por quem a abre).
+  const dominio = email.split('@')[1] || '';
+  if (!LOGIN_CFG.dominios.includes(dominio))
+    return diz('Cadastro liberado só para e-mail @' + LOGIN_CFG.dominios.join(', @') + '.');
   if (senha.length < 6) return diz('A senha precisa de ao menos 6 caracteres.');
   if (senha !== confirma) return diz('As senhas não conferem.');
   if (!MODO_LOCAL) return diz('O cadastro por senha precisa do Guia local, com o servidor ligado.');
@@ -10991,7 +10998,7 @@ async function cadastrarComSenha() {
   try {
     const r = await apiLocal('/api/cadastrar-senha', { method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome: nome.trim(), usuario: usuario.trim(), senha }) });
+      body: JSON.stringify({ nome: nome.trim(), email, senha }) });
     SESSAO = Object.assign({}, r.usuario, { token: r.token, porSenha: true });
     guardaSessao({ email: SESSAO.email, nome: SESSAO.nome, foto: SESSAO.foto,
                    papel: SESSAO.papel, token: r.token, porSenha: true });
