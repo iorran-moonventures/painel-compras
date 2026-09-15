@@ -1823,6 +1823,23 @@
     font-size:10.5px; color:var(--text-light); line-height:1.6; text-align:left; }
 
   /* selo do usuário na barra */
+  /* selo de sincronia: verde em dia, ambar atrasado, vermelho urgente */
+  .nav-sinc { border:none; border-radius:8px; font:600 11px inherit; font-family:inherit;
+    padding:5px 11px; cursor:pointer; white-space:nowrap; margin-right:8px; transition:filter .13s; }
+  .nav-sinc:hover { filter:brightness(.95); }
+  .nav-sinc.ok { color:#0B6B4F; background:rgba(18,168,122,.14); }
+  .nav-sinc.atrasado { color:#7A3E00; background:rgba(224,140,11,.16); }
+  .nav-sinc.urgente { color:#fff; background:#9B2C22; }
+  .sinc-faixa { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:9000;
+    background:#9B2C22; color:#fff; border-radius:12px; padding:12px 16px; font-size:12.5px;
+    line-height:1.55; box-shadow:0 8px 24px rgba(0,0,0,.22); max-width:640px;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .sinc-faixa button { border:none; border-radius:8px; background:#fff; color:#9B2C22;
+    font:700 11.5px inherit; font-family:inherit; padding:6px 12px; cursor:pointer; }
+  .sinc-faixa .sinc-x { background:transparent; color:#fff; font-size:13px; padding:4px 6px; }
+  .sinc-pre { background:var(--bg); border-radius:10px; padding:14px; font-size:11px;
+    line-height:1.6; white-space:pre-wrap; margin:14px 0; box-shadow:var(--nm-dentro-sm); }
+  .sinc-acoes { display:flex; justify-content:flex-end; }
   .nav-user { display:flex; align-items:center; gap:7px; margin-left:10px; flex-shrink:0; }
   .nav-user img { width:26px; height:26px; border-radius:50%; object-fit:cover; }
   .nav-user-ini { width:26px; height:26px; border-radius:50%; background:var(--blue); color:#fff;
@@ -4420,6 +4437,88 @@ function rsCelula(produtoId, supplier) {
     >${dias ? dias + 'd' : '+ prazo'}${excecao ? '<i class="rs-ponto"></i>' : ''}</span>`;
 }
 
+// ══════════════ SINCRONIA COM O SITE PUBLICADO ══════════════
+// O site não tem banco: é um retrato embutido no HTML, e "sincronizar" é
+// publicar. Duas gravidades — dado velho espera as 7h; estrutura velha, não,
+// porque o site segue no ar mostrando número errado sem avisar ninguém.
+let _sincronia = null;
+
+async function checarSincronia(silencioso) {
+  if (!MODO_LOCAL) return null;
+  try {
+    const r = await apiLocal('/api/sincronia');
+    _sincronia = r;
+    pintarSelodeSincronia();
+    if (r.urgente && !silencioso) avisarPublicacaoUrgente();
+    return r;
+  } catch (e) { return null; }
+}
+
+function pintarSelodeSincronia() {
+  if (!_sincronia) return;
+  let el = document.getElementById('navSincronia');
+  const nav = document.querySelector('nav');
+  if (!nav) return;
+  if (!el) {
+    el = document.createElement('button');
+    el.id = 'navSincronia'; el.className = 'nav-sinc';
+    el.onclick = () => abrirSincronia();
+    const alvo = document.getElementById('navUsuario');
+    alvo ? nav.insertBefore(el, alvo) : nav.appendChild(el);
+  }
+  const e = _sincronia.estado;
+  el.className = 'nav-sinc ' + (e === 'urgente' ? 'urgente' : e === 'atrasado' ? 'atrasado' : 'ok');
+  el.textContent = e === 'urgente' ? '⚠ publicar agora'
+                 : e === 'atrasado' ? '● site desatualizado'
+                 : '● site em dia';
+  el.title = e === 'urgente'
+    ? 'A estrutura do painel mudou e o site publicado lê o formato antigo. Publique agora.'
+    : e === 'atrasado' ? 'Há dado novo que ainda não foi publicado. A rotina das 7h resolve.'
+    : 'O site publicado está contando o mesmo que o banco local.';
+}
+
+function avisarPublicacaoUrgente() {
+  if (document.getElementById('sincUrgente')) return;
+  const d = document.createElement('div');
+  d.id = 'sincUrgente'; d.className = 'sinc-faixa';
+  d.innerHTML = `<b>⚠ Publicação urgente.</b> A estrutura do painel mudou e o site publicado
+    ainda lê o formato antigo — ele segue no ar mostrando número errado.
+    <button onclick="publicarAgora(this)">Publicar agora</button>
+    <button class="sinc-x" onclick="this.parentElement.remove()" title="Fechar">✕</button>`;
+  document.body.appendChild(d);
+}
+
+async function abrirSincronia() {
+  const r = await checarSincronia(true);
+  if (!r) { showToast('Não consegui conferir a sincronia.'); return; }
+  const html = `<div class="doc-modal" id="sincModal"><div class="doc-modal-cx" style="max-width:620px">
+    <div class="doc-modal-topo"><div><b>Sincronia com o site publicado</b>
+      <div class="doc-modal-sub">O site é um retrato do banco. Publicar é o que sincroniza.</div></div>
+      <button class="doc-x" onclick="document.getElementById('sincModal').remove()">✕</button></div>
+    <pre class="sinc-pre">${escHtml((r.relatorio || []).join('\n'))}</pre>
+    <div class="sinc-acoes">
+      <button class="btn btn-sync" onclick="publicarAgora(this)">Publicar agora</button>
+    </div>
+  </div></div>`;
+  const el = document.createElement('div'); el.innerHTML = html;
+  document.body.appendChild(el.firstElementChild);
+}
+
+async function publicarAgora(bt) {
+  if (!MODO_LOCAL) { showToast('A publicação precisa do servidor local.'); return; }
+  if (bt) { bt.disabled = true; bt.textContent = 'Publicando…'; }
+  try {
+    const r = await apiLocal('/api/publicar', { method: 'POST' });
+    showToast('Publicado. ' + (r.linhas || []).filter(l => /push|Publicado/.test(l)).join(' · '));
+    document.getElementById('sincUrgente')?.remove();
+    document.getElementById('sincModal')?.remove();
+    await checarSincronia(true);
+  } catch (e) {
+    showToast('Não deu para publicar: ' + e.message);
+    if (bt) { bt.disabled = false; bt.textContent = 'Publicar agora'; }
+  }
+}
+
 // ══════════════ PENDÊNCIAS DE PREÇO E CONDIÇÃO ══════════════
 // "Atualizar dados" não traz mais preço nem condição de pagamento — o que a
 // COLETA tem é o CMV, aproximado. Pedido novo entra em branco e aparece aqui,
@@ -4928,7 +5027,7 @@ function abrirModulo(id) {
   const bt = document.querySelector('nav .nav-tab[onclick*="\'' + id + '\'"]');
   if (!bt) return;
   switchView(id, bt);
-  if (id === 'fornecedores') { renderDashboardGeral(); ajustaGraficoMes(); checarPendencias(); }
+  if (id === 'fornecedores') { renderDashboardGeral(); ajustaGraficoMes(); checarPendencias(); checarSincronia(); }
 }
 
 // Volta para a escolha de módulos. A barra de cima perde o destaque, porque
