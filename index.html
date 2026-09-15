@@ -11317,10 +11317,26 @@ function otdDataRef(o) { return o.dateIni || o.date; }
 // No prazo = antecipou, ou escorregou mas ficou na MESMA SEMANA do pedido.
 // Semana é a unidade real de planejamento aqui: mudar de terça para quinta não
 // desorganiza o CD; empurrar para a semana seguinte, sim.
+// Próximo dia de trabalho depois de uma data: sexta → segunda, sábado → segunda.
+function proxDiaUtil(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+  // Montado à mão: toISOString converte para UTC e devolveria o dia anterior em
+  // qualquer fuso a leste de Greenwich. A data aqui é de calendário, não instante.
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+         + '-' + String(d.getDate()).padStart(2, '0');
+}
 function otdNoPrazo(o) {
   if (!otdEntregue(o)) return false;                       // não chegou: não cumpriu
   if (o.date <= o.dateIni) return true;                    // antecipado ou na data
-  return semanaDe(o.date) === semanaDe(o.dateIni);         // mesma semana ISO
+  if (semanaDe(o.date) === semanaDe(o.dateIni)) return true;   // mesma semana ISO
+  // A semana ISO sozinha punia pela POSIÇÃO da data na semana, não pelo atraso:
+  // prometer segunda e entregar sexta (4 dias úteis tarde) contava como cumprido,
+  // prometer sexta e entregar segunda (nenhum dia útil perdido) zerava o pedido
+  // inteiro. Eram 7 casos assim na base, todos sexta→segunda — o P.70 da JACE
+  // entre eles. Chegar no primeiro dia útil seguinte não tira um dia de operação
+  // de ninguém; o que separa os dois casos ali é só o fim de semana no meio.
+  return o.date <= proxDiaUtil(o.dateIni);
 }
 // Quanto chegou daquele pedido. Recebido é recebido: pedido fechado sem
 // conferência lançada conta pela quantidade pedida — a mercadoria veio, o que
@@ -11507,7 +11523,9 @@ function otdBloco(nome) {
       </div>
     </div>
     <div class="otd-nota"><b>Regra:</b> cumpriu quem entregou na <b>mesma semana</b> da data do
-      pedido ou antes. Escorregar para a semana seguinte zera aquele pedido. E a entrega é
+      pedido ou antes — ou no <b>primeiro dia útil seguinte</b>, que é o caso de prometer sexta e
+      entregar segunda: nenhum dia de operação se perdeu. Escorregar mais que isso zera aquele
+      pedido. E a entrega é
       <b>proporcional</b>: 9.000 de 10.000 un na data valem 90% do OTD daquele pedido — entregar a
       mais não passa de 100%. <b>Pedido cuja data já passou e não chegou entra como zero</b>, no mês
       em que deveria ter sido entregue — adiar não apaga o compromisso vencido. A conta é sobre a
@@ -11721,8 +11739,8 @@ function desenhaOTD() {
   el.innerHTML =
     '<div class="abc-screen-box"><div class="abc-screen-head">' +
       '<div><div class="abc-screen-t">OTD — entrega no prazo</div>' +
-      '<div class="abc-screen-s">Cumpriu quem entregou na <b>mesma semana</b> da data do pedido ou antes; ' +
-        'escorregar para a semana seguinte zera aquele pedido. A entrega é <b>proporcional</b> — 9.000 de ' +
+      '<div class="abc-screen-s">Cumpriu quem entregou na <b>mesma semana</b> da data do pedido, antes, ' +
+        'ou no <b>primeiro dia útil seguinte</b>; escorregar mais que isso zera aquele pedido. A entrega é <b>proporcional</b> — 9.000 de ' +
         '10.000 un valem 90%. Pedido <b>vencido e não entregue</b> conta como zero no mês em que ' +
         'deveria ter chegado.</div></div>' +
       '<div class="abc-screen-ctl">' +
