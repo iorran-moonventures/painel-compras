@@ -6127,9 +6127,10 @@ function dashNoPeriodo(ym) {
   if (dashAno !== 'todos' && ym.slice(0,4) !== dashAno) return false;
   return true;
 }
-// Linhas com o mês aplicado. Só o ranking de produtos usa isto: a série "Por mês"
-// e os KPIs precisam do ano inteiro, senão o gráfico vira uma coluna só.
-function dashRowsProduto(forn) {
+// Linhas com o mês aplicado. Os rankings (Por fornecedor, Top produtos) usam
+// isto: a série "Por mês" e os KPIs continuam no ano inteiro, senão o gráfico
+// vira uma coluna só (decisão do Iorran em 17/08/2026, ver dashNoPeriodo acima).
+function dashRowsComMes(forn) {
   const base = dashRows(forn);
   if (dashMes === 'todos') return base;
   return base.filter(r => r[2].slice(5,7) === dashMes);
@@ -6738,7 +6739,7 @@ function dashControles() {
     </div>` : ''}
     <div class="dash-ctl-group"><span class="dash-ctl-lbl">Mês</span>
       <select class="dash-sel" onchange="setDashMes(this.value)"
-              title="Afeta só o ranking de produtos. A série por mês e os KPIs continuam no ano inteiro.">
+              title="Afeta os rankings Por fornecedor e Top produtos. A série por mês e os KPIs continuam no ano inteiro.">
         <option value="todos"${dashMes==='todos'?' selected':''}>Todos</option>
         ${['01','02','03','04','05','06','07','08','09','10','11','12'].map((m,i) =>
           `<option value="${m}"${dashMes===m?' selected':''}>${MES_NOME[i]}</option>`).join('')}
@@ -7718,13 +7719,12 @@ function htmlDashGeralBody() {
   const rows = dashRows(null);
   const k = dashKpis(rows);
   const porForn = {};
-  rows.forEach(r => porForn[r[0]] = (porForn[r[0]]||0) + dashVal(r));
+  dashRowsComMes(null).forEach(r => porForn[r[0]] = (porForn[r[0]]||0) + dashVal(r));
   const totalAtual = Object.values(porForn).reduce((a,b)=>a+b,0);
   const itensForn = Object.entries(porForn).sort((a,b)=>b[1]-a[1])
     .map(([fi,v]) => ({ label: DASH.F[fi], v }));
-  // único bloco que respeita o filtro de mês
   const porProd = {};
-  dashRowsProduto(null).forEach(r => porProd[r[1]] = (porProd[r[1]]||0) + dashVal(r));
+  dashRowsComMes(null).forEach(r => porProd[r[1]] = (porProd[r[1]]||0) + dashVal(r));
   const itensProd = Object.entries(porProd).sort((a,b)=>b[1]-a[1]).slice(0,12)
     .map(([pi,v]) => ({ label: DASH.P[pi], v }));
 
@@ -7751,7 +7751,7 @@ function htmlDashGeralBody() {
     ${rscBotao()}
     ${limSecao()}
 
-    <div class="dash-section"><h3>Por fornecedor</h3>${barras(itensForn, totalAtual)}</div>
+    <div class="dash-section"><h3>Por fornecedor${dashMes!=="todos"?" <span style=\"font-weight:400;color:var(--text-light);font-size:11.5px\">— só "+dashMesTexto()+"</span>":""}</h3>${barras(itensForn, totalAtual)}</div>
     <div class="dash-section"><h3>Top produtos${dashMes!=="todos"?" <span style=\"font-weight:400;color:var(--text-light);font-size:11.5px\">— só "+dashMesTexto()+"</span>":""}</h3>${barras(itensProd, totalAtual, 'var(--navy-soft)', 'produto')}</div>
     ${secProdutoMes('__geral__', 12, rows)}
     <div class="dash-src">Fonte: aba <b>Solicitação</b> das planilhas COLETA no Drive · ${k.itens} registros agregados · ${DASH.F.length} fornecedores</div>`;
@@ -7788,7 +7788,7 @@ function htmlDashFornecedor(nome) {
   const k = dashKpis(rows);
   // único bloco que respeita o filtro de mês
   const porProd = {};
-  dashRowsProduto(nome).forEach(r => porProd[r[1]] = (porProd[r[1]]||0) + dashVal(r));
+  dashRowsComMes(nome).forEach(r => porProd[r[1]] = (porProd[r[1]]||0) + dashVal(r));
   const total = Object.values(porProd).reduce((a,b)=>a+b,0);
   const itensProd = Object.entries(porProd).sort((a,b)=>b[1]-a[1])
     .map(([pi,v]) => ({ label: DASH.P[pi], v }));
